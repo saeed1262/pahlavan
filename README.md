@@ -2,7 +2,7 @@
 
 <h1 align="center">Pahlavan</h1>
 
-**A science-based AI fitness coach that lives in your Obsidian vault.** Pahlavan is an Obsidian plugin for strength training, workout logging and daily habits, with an AI coach in Claude Code that plans your training from your own goals, time and equipment, and looks back with you every week. Everything sits in plain files in your vault, so your data stays yours.
+**A science-based AI fitness coach for Claude Code and Obsidian.** Pahlavan’s coach is a Claude Code skill that plans your strength training from your own goals, time and equipment, logs your workouts and meals, and looks back with you every week. Use it in any folder, or add the Obsidian plugin for screens, charts and reminders. Everything sits in plain files on your computer, so your data stays yours.
 
 [![Release](https://img.shields.io/github/v/release/saeed1262/pahlavan?label=release&color=0f766e)](../../releases/latest)
 [![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-0f766e)](LICENSE)
@@ -16,6 +16,8 @@
 <sub>Shown with <a href="https://community.obsidian.md/plugins/isfahan-look">Isfahan Look</a>, my free plugin for Obsidian's look: Persian tilework, palettes that follow the sun and a book-like page. Pahlavan works with any theme.</sub>
 
 **▶ [Watch the 97-second demo](https://youtu.be/X5PZv5TxVdM)** · **[Try it in your browser](https://saeed1262.github.io/pahlavan/demo/)** (the real screens on a made-up athlete, nothing to install)
+
+**No Obsidian?** [Start with the coach on its own](docs/without-obsidian.md): install, open the folder in Claude Code, and run `/fitness-coach intake`.
 
 > [!NOTE]
 > **Pahlavan is a free beta.** I use it every day, and it may still change. Bug reports and ideas are welcome in [GitHub issues](../../issues). Using it? [Say hi in the pinned issue](../../issues/1): Pahlavan counts nothing about you, so that's how I know who uses it.
