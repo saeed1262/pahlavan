@@ -51,7 +51,10 @@ their machine-readable twins `Coach/profile.json` and `Coach/ledger.json`
    write. That write sets Pahlavan up; in a vault with the Habit Nudges
    plugin, it hands its health reminders over (the output's `handOver`
    note): say so in one line. If the user accepts no item, the bring-over
-   record alone doesn't set Pahlavan up.
+   record alone doesn't set Pahlavan up. Without Pahlavan (SKILL.md,
+   "Without Pahlavan"): no `morning` key (no card ever shows) and none of
+   stand-ups, sitting time or desk breaks; the intake ends with the three
+   touchpoints and their commands.
 7. **The cycle's Baseline note** (`engine.cjs baseline`: `numbers.md`, "The
    baseline note: `baseline`"). The intake is a fresh start, and the cycle
    start, week 1, readiness's 14 mornings and every "This cycle" view count

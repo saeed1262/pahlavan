@@ -40,6 +40,8 @@ import type { BodyRecordUi, MorningBellUi } from './ui/body-record.ts';
 import { dueTodayCard, sittingBar } from './ui/due-today.ts';
 import { renderHabits, todayCard, type HabitsContext, type HabitsUi } from './ui/habits.ts';
 import { renderFood } from './ui/food.ts';
+import type { MealFormWriter } from './meal-writer.ts';
+import type { MealsCard } from '../../src/report/meals-card.ts';
 import { freshMovementsUi, renderMovements, type MovementsUi } from './ui/movements.ts';
 import { checksPrefill, type PatternCheck } from '../../src/report/food.ts';
 import { attachTooltip } from './ui/tooltip.ts';
@@ -107,6 +109,10 @@ export interface ViewDeps {
   offsetMinutes?: () => number;
   /** Opens Obsidian's settings on Pahlavan's tab (Due today's gear); absent: not offered. */
   openSettings?: () => void;
+  /** Opens the meal form (the Food tab's Log a meal); absent: not offered. */
+  logMeal?: () => void;
+  /** The meal form's writer, for taking a waiting meal out (the Meals card's Remove); absent: read only. */
+  mealWriter?: MealFormWriter | null;
   /** A moment as local HH:MM (Due today's "standing since"). */
   clockText?: (ms: number) => string;
   /** The help's memory (Coach/help.json: the tips seen, the welcome card hidden); absent: no tips, the welcome card can't hide. */
@@ -173,6 +179,9 @@ export class PahlavanView extends ItemView {
   private foodModel: FoodModel | null = null;
   private foodTables = new Set<string>();
   private foodBusy = false;
+  /** The Food tab's Meals card, and a waiting meal being removed. */
+  private mealsModel: MealsCard | null = null;
+  private mealBusy: string | null = null;
   private ideas: { date: string; steps: Record<string, number> } = { date: '', steps: {} };
   /** The help: its state as last read, the tip bubble on screen, and whether the next tip scrolls into view. */
   private helpState: HelpState | null = null;
@@ -300,6 +309,7 @@ export class PahlavanView extends ItemView {
       this.checkinState = this.checkinModel ? refreshCheckinState(this.checkinState, this.checkinModel) : null;
       this.habitsModel = this.deps.data.habits(this.date, { offsetMinutes: this.deps.offsetMinutes?.() ?? 0 });
       this.foodModel = this.deps.data.food(this.date, { type: this.pickedType() });
+      this.mealsModel = this.deps.data.meals(this.date);
       this.dueModel = await this.fetchDue(true);
       // A re-read keeps the help's changes still on their way; without the store, the screens' memory lives here.
       if (this.deps.help) this.helpState = this.helpPending.reduce(applyHelp, await this.deps.help.read());
@@ -554,8 +564,26 @@ export class PahlavanView extends ItemView {
         st[meal] = (st[meal] ?? 0) + 1;
         this.render();
       },
+      meals: this.mealsModel,
+      ...(this.deps.logMeal ? { onLogMeal: () => this.deps.logMeal!() } : {}),
+      ...(this.deps.mealWriter ? { onRemoveMeal: (id: string) => void this.removeMeal(id) } : {}),
+      ...(this.deps.copy ? { onCopyMeal: () => void this.deps.copy!('/fitness-coach meal').then(() => this.deps.notify('Copied: /fitness-coach meal'), () => this.deps.notify('Couldn’t copy the command')) } : {}),
+      mealBusy: this.mealBusy,
     });
     this.contentEl.scrollTop = top;
+  }
+
+  /** A waiting meal taken out from the Meals card (its file and its photo), then a re-read. */
+  private async removeMeal(id: string): Promise<void> {
+    const w = this.deps.mealWriter;
+    if (!w || this.mealBusy) return;
+    this.mealBusy = id;
+    this.render();
+    const r = await w.remove(id);
+    this.mealBusy = null;
+    if (r.status === 'failed') this.deps.notify(`The meal wasn’t removed: ${r.error}`);
+    else this.deps.notify('Removed: your coach won’t see that meal.');
+    await this.reload();
   }
 
   /** The Movements tab, for the search and filters as they stand. */

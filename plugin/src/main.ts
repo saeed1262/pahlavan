@@ -32,6 +32,8 @@ import { PAHLAVAN_ICON, PAHLAVAN_ICON_ID } from './brand-icon.ts';
 import { modalCards } from './card-modal.ts';
 import { CheckinWriter } from './checkin-writer.ts';
 import { isWatched, PahlavanData } from './data-source.ts';
+import { MealModal } from './meal-modal.ts';
+import { MealFormWriter } from './meal-writer.ts';
 import { LogWriter } from './log-writer.ts';
 import { chime, convertPhoto, focusObsidian, holdObsidianFront, homeDir, hostName, notifyMac, runProgram, systemIdleSeconds } from './reminders/mac.ts';
 import { Reminders } from './reminders/machine.ts';
@@ -130,6 +132,8 @@ export default class PahlavanPlugin extends Plugin {
     const checkinWriter = new CheckinWriter(this.app.vault.adapter);
     const reminders = this.startReminders(device, checkinWriter);
     const adapter = this.app.vault.adapter as unknown as InboxAdapter;
+    const mealWriter = new MealFormWriter(this.app.vault.adapter, convertPhoto);
+    const logMeal = () => this.logMeal(mealWriter);
     this.inbox = new InboxImporter({ adapter, log: new LogWriter(adapter), writer: new ReminderWriter(adapter), checkin: checkinWriter, configDir: this.app.vault.configDir });
 
     this.registerView(VIEW_TYPE, (leaf: WorkspaceLeaf) => new PahlavanView(leaf, {
@@ -153,6 +157,8 @@ export default class PahlavanPlugin extends Plugin {
       trackingWriter: new TrackingWriter(this.app.vault.adapter),
       offsetMinutes: () => -new Date().getTimezoneOffset(),
       openSettings: () => this.openSettings(),
+      logMeal,
+      mealWriter,
       clockText: (ms) => {
         const d = new Date(ms);
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -171,6 +177,7 @@ export default class PahlavanPlugin extends Plugin {
     this.addCommand({ id: 'open-guide', name: 'Open the user guide', callback: () => void this.openGuide() });
     this.addCommand({ id: 'write-exercise-catalogue', name: 'Write the exercise catalogue', callback: () => void this.writeCatalogue() });
     this.addCommand({ id: 'browse-movements', name: 'Browse movements', callback: () => void this.openSection('movements') });
+    this.addCommand({ id: 'log-meal', name: 'Log a meal', callback: logMeal });
     // "Open check-in" is what Isfahan's new-tab Check-in row runs: the morning card until today's is in, then the Check-in screen.
     this.addCommand({ id: 'open-checkin', name: 'Open check-in', callback: () => void reminders.openCheckin() });
     this.addCommand({ id: 'morning-checkin', name: 'Open the morning check-in', callback: () => void reminders.openCard('morning') });
@@ -308,7 +315,7 @@ export default class PahlavanPlugin extends Plugin {
   private async writeCatalogue(): Promise<void> {
     const dir = paths().fitness;
     const path = `${dir}/Exercise catalogue.md`;
-    const text = catalogueMarkdown({ stamp: `Written by Pahlavan ${this.manifest.version} on ${localToday()}. After an update, run "Pahlavan: Write the exercise catalogue" again for the new version's list.` });
+    const text = catalogueMarkdown({ stamp: `Written by Pahlavan ${this.manifest.version} on ${localToday()}. After an update, run the command "Write the exercise catalogue" (type Pahlavan in the command palette) again for the new version's list.` });
     try {
       if (!(await this.app.vault.adapter.exists(dir))) await this.app.vault.adapter.mkdir(dir);
       await this.app.vault.adapter.write(path, text);
@@ -320,6 +327,23 @@ export default class PahlavanPlugin extends Plugin {
     await this.app.workspace.openLinkText(path, '', 'tab');
   }
 
+
+  /** The meal form: saved for the coach to estimate (Coach/Inbox/meals/), then the tabs read again. */
+  private logMeal(writer: MealFormWriter): void {
+    const now = new Date();
+    const at = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    new MealModal(this.app, {
+      start: { date: localToday(now), at },
+      save: (input) => {
+        const t = new Date();
+        return writer.save(input, { date: localToday(t), time: `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}` }, localToday(t));
+      },
+      saved: (_id, photo) => {
+        new Notice(`Saved for your coach${photo ? ', with its photo' : ''}. Type /fitness-coach meal in Claude Code to have it estimated.`, 8000);
+        this.scheduleReload();
+      },
+    }).open();
+  }
   private async openGuide(): Promise<void> {
     if (await this.app.vault.adapter.exists(paths().guide)) {
       (this.app as unknown as { setting?: { close?: () => void } }).setting?.close?.();

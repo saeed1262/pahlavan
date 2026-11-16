@@ -74,6 +74,11 @@ review then designs the block that starts the next day. At a phase's end
      (`rules.md`, "Exercise changes", **Weak**): at most half the
      accessories change, and a region-biasing movement stays for the phase
      (planned variation, **Moderate**). A change past a default says why.
+     A new grip is a change like any other (a new name in parentheses, so a
+     new history: it counts toward the half), and so is the answer to a
+     `same-path-twice` or `movement-twice-a-week` note on the plan as written
+     (`planning.md`, section 4, "Repeats take a different path"): the block's
+     boundary is where it goes in.
    - **Main lifts stay within the phase** unless the data says otherwise:
      pain on the lift (a pain report, a joint ache, a new Ledger entry), or
      a stall the triage ladder's earlier steps haven't fixed

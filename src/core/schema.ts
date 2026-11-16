@@ -13,6 +13,7 @@
 //   sitting.json        SittingLog (sitting stretches per day and per Mac)
 //   eating-plan.json    EatingPlan (the eating plan's numbers, meals, portions, pattern and adjustment rule;
 //                       optionally the Food tab's words, the day's times, meal ideas, light checks and tips)
+//   meals.json          MealsFile (the meals the coach estimated from a photo or a description)
 
 import type { Pattern } from './data/exercises.ts';
 import type { IsoDate } from './dates.ts';
@@ -999,6 +1000,76 @@ export interface EatingPlan {
   today?: { optional?: OptionalCheck[] };
   /** The coach's tips, three or four. */
   tips?: CoachTip[];
+}
+
+// ---------------------------------------------------------------- meals (Coach/meals.json)
+
+/** Where a meal's estimate came from: a photo read in the chat (never kept) or the user's words. */
+export const MEAL_SOURCES = ['photo', 'text'] as const;
+export type MealSource = (typeof MEAL_SOURCES)[number];
+
+/**
+ * A meal's numbers as the coach estimated them: protein always, the rest
+ * where counting is allowed. These are the coach's estimates (`by: coach`),
+ * not measured or looked up: the readers say "about", and nothing treats
+ * them as exact.
+ */
+export interface MealEstimate {
+  proteinG: number;
+  kcal?: number;
+  fiberG?: number;
+  fatG?: number;
+  carbsG?: number;
+}
+
+/** One meal the coach estimated from a photo or a description, after the user's yes (`engine meal add`). */
+export interface MealEntry {
+  /** The date and the time (2026-11-14-1310), or the date and a counter; unique in the file. */
+  id: string;
+  date: IsoDate;
+  /** When it was eaten, HH:MM, if the user said or the chat's time. */
+  at?: string;
+  /** A short name: "Lunch: chicken, rice and salad". */
+  name: string;
+  /** Each food with its portion as the coach read it (grams and hand portions in words). */
+  items: { food: string; portion: string }[];
+  estimate: MealEstimate;
+  /** How sure the estimate is: low (a photo with hidden oil or sauce), medium, high (a label or weights given). */
+  confidence: (typeof CONFIDENCE)[number];
+  from: MealSource;
+  /** What the estimate assumed ("oil not visible: 1 tsp assumed"). */
+  note?: string;
+  /** Always the coach: every number here is its estimate. */
+  by: 'coach';
+}
+
+export interface MealsFile {
+  schemaVersion: SchemaVersion;
+  meals: MealEntry[];
+}
+
+/** A waiting meal's file version (`v`), as the phone's entries carry theirs. */
+export const PENDING_MEAL_VERSION = 1 as const;
+
+/**
+ * A meal waiting for the coach's estimate: one file in Coach/Inbox/meals/
+ * (`<yyyy-MM-dd>T<HH-mm-ss>-meal.json`, its photo beside it with the same
+ * stem). Pahlavan's meal form saves it; the coach estimates it and records
+ * it with `meal add --pending <id>`, which removes the file and its photo.
+ * It holds no numbers: the user's own words and the photo only.
+ */
+export interface PendingMeal {
+  v: typeof PENDING_MEAL_VERSION;
+  /** The training day it was eaten. */
+  date: IsoDate;
+  /** When it was eaten, HH:MM, when given. */
+  at?: string;
+  /** What the user ate in their own words, with anything that helps (portions, the oil, a label's numbers). */
+  text?: string;
+  /** The photo's file name beside this file, when one was added. */
+  photo?: string;
+  /** When the form saved it, local time (YYYY-MM-DDTHH:MM:SS). */
+  made: string;
 }
 
 // ---------------------------------------------------------------- desk breaks in the program

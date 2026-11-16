@@ -44,8 +44,8 @@ interface Draft {
 }
 
 const n = (v: number) => v.toLocaleString('en-GB');
-const isHeic = (name: string) => /\.hei[cf]$/i.test(name);
-const isImage = (f: { name: string; type?: string }) => /^image\//.test(f.type ?? '') || /\.(jpe?g|png|heic|heif|webp|gif)$/i.test(f.name);
+export const isHeic = (name: string): boolean => /\.hei[cf]$/i.test(name);
+export const isImage = (f: { name: string; type?: string }): boolean => /^image\//.test(f.type ?? '') || /\.(jpe?g|png|heic|heif|webp|gif)$/i.test(f.name);
 
 export class CardController {
   readonly el: HTMLElement;

@@ -141,6 +141,14 @@ becomes the value `ask[].options` gives it.
    protein tick is still ahead; pass `--time` with the template).
    → `proteinExtra` (the answer: days beyond the ticks; readers add the ticks
    at read time, so a later tick counts once). Older records keep `proteinDays`.
+   Meals still waiting from Pahlavan's form for that week (`meal pending`):
+   offer to estimate them first (`meal.md`, section 0), so the days below
+   read them.
+   With meals recorded that week (`meal show --from <Monday> --to <Sunday>`),
+   show each unticked day's estimated protein first ("Tuesday: about 110 g
+   from 2 meals"), quoted as estimates, and ask only about the unticked days
+   with no meals; a day whose meals reach the goal is ticked already by
+   `meal add`.
 8. **Enjoyment.** "How much did you look forward to sessions?" A lot /
    Fine / Meh / Dreaded them. → `enjoyment`.
 
@@ -408,4 +416,12 @@ top goal.
    - **One question for you:** something the coach needs and the data can't
      show; next week's check-in asks for the answer.
 4. Tell the user in three lines: the headline, the focus, the link
-   (`obsidian://open?vault=<the vault folder's name, URL-encoded>&file=<URL-encoded path without .md>`).
+   (`obsidian://open?vault=<the vault folder's name, URL-encoded>&file=<URL-encoded path without .md>`;
+   without Pahlavan, the letter's path in the folder).
+5. **The cycle's first letter only** (no other letter in `Coach/Letters/`):
+   one more line, a question about Pahlavan itself: "What would make
+   Pahlavan better for you? If you tell me, I'll draft it as an issue for
+   github.com/saeed1262/pahlavan/issues, for you to post." If they answer,
+   draft the issue's title and text from their words, with no health
+   details unless they ask for them. Nothing is sent from here: the user
+   posts it, or not. Never asked again.

@@ -25,7 +25,10 @@ import { habitsView } from '../core/tracking.ts';
 import { buildTrackDay, planTick } from '../report/track-day.ts';
 import { momentAt, toMinutes, toTs } from '../core/clock.ts';
 import type { VaultWarning } from '../adapters/vault/convert.ts';
-import { isIsoDate } from '../core/dates.ts';
+import { addDays, dayText, daysBetween, isIsoDate } from '../core/dates.ts';
+import { proteinItemOf } from '../core/protein.ts';
+import { dayTotals, mealLanded, planMealAdd, planMealDelete, readMeals } from '../report/meal-write.ts';
+import { PENDING_ID, pendingFile, pendingFilesOf, readPending } from '../report/meal-pending.ts';
 import { CATALOGUE_BY_ID, type Level, type Pattern } from '../core/data/exercises.ts';
 import { MUSCLE_IDS } from '../core/data/muscles.ts';
 import { parentMissingText, REGION_IDS, regionProblems, regionsWithoutParent } from '../core/data/regions.ts';
@@ -41,6 +44,8 @@ import {
   validateCheckinLog,
   validateCheckins,
   validateEatingPlan,
+  validateMeals,
+  validatePendingMeal,
   validateLedger,
   validateLog,
   validateProfile,
@@ -71,6 +76,7 @@ import { planDiff, sameJson } from '../report/plan-write.ts';
 import { coachStepsOf } from '../report/checkin-screen.ts';
 import { frozenList } from '../report/log-form.ts';
 import { logAddEntry } from '../report/log-add.ts';
+import { editableSession, findSession, logEditEntry, missingText, selectorKey, type SessionSelector } from '../report/log-edit.ts';
 import { mergeFix, mergeHabit, mergeLadder, mergeLog, sessionKey } from '../adapters/vault/log-write.ts';
 import { readChanges, planTrack, setUp, type TrackChanges } from '../report/track-write.ts';
 import { buildBringOver, buildDue, buildHabitStats, buildTracked, proteinFor } from '../report/tracking.ts';
@@ -81,7 +87,7 @@ import { baselineNote } from '../report/baseline.ts';
 import { eatingLanded, planEating } from '../report/eating-write.ts';
 import { applyInbox, buildPhone, INBOX_FILES, INBOX_PATHS, INBOX_TEXT_KEYS, inboxTextPaths, isEntryFile, phoneText, refusedLine, refusedOf, refusedText, type InboxFile, type InboxTextKey, type InboxTexts } from '../report/inbox.ts';
 import { folders, paths, resolveFolders, useFolders, type FoldersSource } from '../adapters/vault/layout.ts';
-import { versionWarning } from '../adapters/vault/plugin-version.ts';
+import { pluginVersion, versionWarning } from '../adapters/vault/plugin-version.ts';
 
 export interface CliResult {
   code: number;
@@ -105,6 +111,10 @@ export interface CliIo extends ReadIo {
   writeHabits?(root: string, text: string): void;
   /** Writes the layout's Coach/eating-plan.json under `<root>` and nothing else (the folder is created if needed). */
   writeEating?(root: string, text: string): void;
+  /** Writes the layout's Coach/meals.json under `<root>` and nothing else (the folder is created if needed). */
+  writeMeals?(root: string, text: string): void;
+  /** Removes one waiting meal's file (its entry or its photo) from the layout's Coach/Inbox/meals/ under `<root>`, and nothing else. */
+  removePending?(root: string, file: string): void;
   /** Writes the layout's fitness-log-data.json under `<root>` (the phone's sessions, as the Log panel merges them). */
   writeLog?(root: string, text: string): void;
   /** Writes the layout's Coach/nudges.json under `<root>` (the phone's answer to "Did you train today?"). */
@@ -186,13 +196,16 @@ Commands (each prints JSON to stdout, with every rule's reason):
             mesocycle against the plan as written, "Why:" lines, week changes
             in notes); facts the profile states (a movement its equipment does
             not cover, one it dislikes, a lift step its loads cannot make);
-            and information. --redesign, with
+            and information (a repeat on one session's same path, an
+            accessory on two days: same-path-twice, movement-twice-a-week).
+            --redesign, with
             --plan: the draft is a new plan, not a change inside this one, so
             its exercise changes are information (redesign-changes), and a
             draft holding more than half of the written plan's movements
             warns (similar-to-current, the shared movements as its items).
             The plan's overrides ({code, item, reason, decision}) turn a
-            matched warning into information with its reason. A
+            matched warning into information with its reason, and put it on
+            a matched information finding. A
             version-differs warning (as review's) is about the vault, not the
             plan. summary counts each level. Exit 1 on a hard error.
   plan-write --vault <path> --file <draft.json> [--redesign] [--date D]
@@ -242,7 +255,9 @@ Commands (each prints JSON to stdout, with every rule's reason):
             listed, in the profile's words, a tool that stands in counting;
             text in its names) with its muscles, regions, abdominal-strain
             tag, level, easier and harder versions, other names, stand-in
-            tools, demand tags, uses, hotel fit and guide text. The order is
+            tools, demand tags, uses, hotel fit, guide text and, for the
+            pulls, presses and curls whose grip changes the path, its grips
+            (a plan names one in parentheses). The order is
             for display only: exact text matches, the muscle as main over
             helping, versions loading a two-joint muscle long, at or under
             --level (which removes nothing; the profile's novice reads as
@@ -254,7 +269,7 @@ Commands (each prints JSON to stdout, with every rule's reason):
             and harder, setup, do and avoid; the ladders; what each demand
             means), the whole catalogue with no filter, as
             docs/exercise-catalogue.md and Pahlavan's catalogue note have it.
-  validate  <file> [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|inbox|letter]
+  validate  <file> [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|meals|pending-meal|inbox|letter]
             The engine's own files. The vault's (plan-data.json, the log,
             body-data.json, habits-data.json, the work timer's) are not
             judged: exit 2, saying what reads or checks each. A coach letter
@@ -311,6 +326,13 @@ Commands (each prints JSON to stdout, with every rule's reason):
                                             dismissed, not proposed again
               accept  --id <id[,id]>        accept suggestions, as the chip does
               dismiss --id <id[,id]>        dismiss suggestions
+              pause   --id <id[,id]>        pause tracked items from today, as
+                                            the Habits screen's Pause (the
+                                            history stays)
+              resume  --id <id[,id]>        resume paused items from today
+              remove  --id <id[,id]>        take tracked items out, as the
+                                            Habits screen's Remove (their day
+                                            records in tracking.json go too)
               morning --at HH:MM | --off    the morning check-in's reminder
               body-record --schedule plan   the tape, photos and tests follow
                           | --schedule fixed --tape-from D --tape-every N
@@ -322,8 +344,9 @@ Commands (each prints JSON to stdout, with every rule's reason):
                                             floor at the trend weight)
               apply   --file <changes.json> several at once, in one write:
                                             {suggest, add, decline, accept,
-                                            dismiss, morning, bodyRecord,
-                                            bringOver, protein}
+                                            dismiss, pause, resume, remove,
+                                            morning, bodyRecord, bringOver,
+                                            protein}
               day     [--date D]            read only: each item due that day
                                             with its state and linked homepage
                                             habit, the ids still open, the
@@ -336,7 +359,8 @@ Commands (each prints JSON to stdout, with every rule's reason):
                                             habit in habits-data.json
   body      --vault <path> --file <record.json> [--replace] [--write]
             The coach's write path into body-data.json: one date's morning
-            fields, tape and tests ({date, morning, tape, tests}), through
+            fields, tape and tests ({date, morning, tape, tests}; morning's
+            "illness": true for "I'm ill today", false takes it off), through
             the same field-by-field merges as Pahlavan's forms (steps and
             floors on the day before, every other field and day kept), read
             back. A field that holds another value already is a conflict
@@ -347,6 +371,10 @@ Commands (each prints JSON to stdout, with every rule's reason):
   log ladder --vault <path> --id <ladder> --level N [--date D] [--write]
   log fix   --vault <path> --date D --type T --lift lift1|lift2 [--label L]
             [--weight W] [--reps R] [--clear-planned] [--write]
+  log show  --vault <path> --date D --type T [--label L]
+  log edit  --vault <path> --date D --type T [--label L] --file <edit.json>
+            [--no-habit] [--write]
+  log delete --vault <path> --date D --type T [--label L] [--write]
             The coach's writes into fitness-log-data.json, as Pahlavan's Log
             panel makes them: add a session ({date, type, label, lift1, lift2,
             express, durationMin, cardioMin, cardioMode, rating, notes,
@@ -360,6 +388,14 @@ Commands (each prints JSON to stdout, with every rule's reason):
             an item of the session (a swap names the plan's as "planned"),
             reps a whole number 0 or more, weight 0 or more (left out for
             bodyweight), RIR 0 to 10; only the sets done.
+            show reads a logged session (by its date, type and label) as
+            edit takes it, with its checklist's line names; edit changes
+            any of its fields (date, lift1, lift2, durationMin, cardioMin,
+            cardioMode, rating, postureDrill, notes, swaps, sessionRpe,
+            pain, hotel, trackingLevel, exerciseSets, skipped, skipWhy;
+            not its type, label or Express) through the same writer, then
+            ticks the day's Workout habit; delete takes it out (the tick
+            stays, as on the Log panel).
             Merged with the file as it is and read back. A dry run unless
             --write.
 
@@ -367,7 +403,8 @@ Commands (each prints JSON to stdout, with every rule's reason):
             Where the vault keeps Pahlavan's files: the folders (Pahlavan's
             setting, else found the way the plugin finds them on its first
             start) with where they came from (settings, found, default), the
-            settings file, and every file's path. Read only.
+            settings file, whether Pahlavan is in the vault (its files in
+            the plugins folder), and every file's path. Read only.
 
   baseline  --vault <path> [--date D]
             The cycle's baseline note for a fresh start on the date (the
@@ -406,6 +443,31 @@ Commands (each prints JSON to stdout, with every rule's reason):
             (objects key by key, lists and values replaced, null removes a
             key), or the whole file with --replace; validated, read back.
             A dry run unless --write.
+  meal add  --vault <path> --file <meal.json> [--pending <id>] [--write]
+            A meal the coach estimated from a photo or a description, into
+            Coach/meals.json: its foods and portions, the estimate (protein;
+            calories, fiber, fat and carbs unless the eating plan's screen
+            ruled counting out), a confidence, by the coach. Checked, its id
+            made from its date and time when it has none, the day added up,
+            and the Protein item ticked (with its linked habit) once the
+            day's estimated protein reaches its goal. The same meal again is
+            "already". With --pending, the waiting meal it records: once the
+            meal is saved, its file and its photo are removed from
+            Coach/Inbox/meals/. A dry run unless --write.
+  meal pending --vault <path>
+            The meals waiting for the coach's estimate in Coach/Inbox/meals/
+            (Pahlavan's meal form): each one's id, date, time, the user's
+            words and its photo's path, with whether the photo is there.
+            Read only.
+  meal discard --vault <path> --pending <id> [--write]
+            A waiting meal not to record: its file and its photo removed.
+            A dry run unless --write.
+  meal show --vault <path> [--date D | --from D --to D]
+            The meals of a day (default today) or of up to 62 days, each day
+            with its totals. Every number is the coach's estimate. Read only.
+  meal delete --vault <path> --id <meal id> [--write]
+            A meal taken out by its id; the day's Protein tick stays as it
+            is. A dry run unless --write.
   inbox     --vault <path> [--write]
             The phone's entries in Coach/Inbox/ (sessions, ticks, amounts,
             the morning check-in, "Did you train today?"), each checked and
@@ -434,6 +496,9 @@ The CLI only reads, except log --write (the log; log add also the Workout
 habit's tick), checkin add --write (Coach/checkins.json), track --write
 (Coach/tracking.json; track tick also habits-data.json's linked habits),
 body --write (body-data.json), eating --write (Coach/eating-plan.json),
+meal add and meal delete --write (Coach/meals.json; meal add also the
+Protein item's tick and its linked habit, and with --pending the waiting
+meal's files), meal discard --write (a waiting meal's files),
 inbox --write (the phone's entries into the log, body-data.json,
 habits-data.json, Coach/tracking.json and Coach/nudges.json, and the
 inbox's own files) and plan-write --write (plan-data.json). The other
@@ -468,6 +533,7 @@ const COMMAND_FLAGS: Record<string, readonly string[]> = {
   baseline: ['vault', 'date'],
   folders: ['vault'],
   eating: ['vault', 'file', 'replace', 'write'],
+  meal: ['vault', 'file', 'write', 'date', 'from', 'to', 'id', 'pending'],
   inbox: ['vault', 'write', 'phone'],
 };
 const GLOBAL_FLAGS = ['pretty', 'json', 'help', 'version'];
@@ -543,7 +609,7 @@ let foldersSource: FoldersSource = 'default';
 
 // ---------------------------------------------------------------- validate
 
-const KINDS = ['profile', 'program', 'session', 'checkin', 'body', 'ledger', 'tracking', 'nudges', 'sitting', 'eating', 'inbox', 'letter'] as const;
+const KINDS = ['profile', 'program', 'session', 'checkin', 'body', 'ledger', 'tracking', 'nudges', 'sitting', 'eating', 'meals', 'pending-meal', 'inbox', 'letter'] as const;
 type Kind = (typeof KINDS)[number];
 
 type Obj = Record<string, unknown>;
@@ -613,10 +679,13 @@ function vaultFileOf(file: string, v: unknown): ReturnType<typeof vaultFiles>[nu
 function inferKind(v: unknown): Kind | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
+  // A meal waiting for the coach: `v` and `made`, no kind.
+  if ('v' in o && 'made' in o && !('kind' in o) && !('schemaVersion' in o)) return 'pending-meal';
   // A phone entry: `v` and `kind`, no schemaVersion.
   if ('v' in o && 'kind' in o && !('schemaVersion' in o)) return 'inbox';
   if ('macrocycle' in o) return 'program';
   if ('meals' in o && 'protein' in o) return 'eating';
+  if ('meals' in o && Array.isArray(o['meals']) && !('protein' in o)) return 'meals';
   if ('items' in o && 'days' in o) return 'tracking';
   if ('skipped' in o) return 'nudges';
   if ('days' in o && 'schemaVersion' in o && typeof o['days'] === 'object' && o['days'] !== null) {
@@ -658,6 +727,10 @@ function validateAs(kind: Kind, v: unknown): { errors: ValidationError[]; shape:
       return { errors: validateSitting(v), shape: 'sittingLog' };
     case 'eating':
       return { errors: validateEatingPlan(v), shape: 'eatingPlan' };
+    case 'meals':
+      return { errors: validateMeals(v), shape: 'meals' };
+    case 'pending-meal':
+      return { errors: validatePendingMeal(v), shape: 'pendingMeal' };
     case 'inbox':
       return { errors: validateInboxEntry(v), shape: 'inboxEntry' };
     case 'letter':
@@ -1097,7 +1170,7 @@ function cmdTracking(command: 'tracked' | 'due' | 'habits' | 'bring-over', flags
 
 // ---------------------------------------------------------------- track (the coach's write path)
 
-const TRACK_ACTIONS = ['suggest', 'add', 'decline', 'accept', 'dismiss', 'morning', 'body-record', 'fresh', 'protein', 'apply', 'day', 'tick'] as const;
+const TRACK_ACTIONS = ['suggest', 'add', 'decline', 'accept', 'dismiss', 'pause', 'resume', 'remove', 'morning', 'body-record', 'fresh', 'protein', 'apply', 'day', 'tick'] as const;
 type TrackAction = (typeof TRACK_ACTIONS)[number];
 const TRACK_FLAGS: Record<TrackAction, readonly string[]> = {
   suggest: ['file'],
@@ -1106,6 +1179,9 @@ const TRACK_FLAGS: Record<TrackAction, readonly string[]> = {
   apply: ['file'],
   accept: ['id'],
   dismiss: ['id'],
+  pause: ['id'],
+  resume: ['id'],
+  remove: ['id'],
   morning: ['at', 'off'],
   'body-record': ['schedule', 'tape-from', 'tape-every', 'tests-from', 'tests-every'],
   fresh: [],
@@ -1129,9 +1205,12 @@ function trackChanges(action: TrackAction, flags: Record<string, string | true>,
       return readChanges(readJson(io, file, `${action} file`), action === 'apply' ? undefined : action);
     }
     case 'accept':
-    case 'dismiss': {
+    case 'dismiss':
+    case 'pause':
+    case 'resume':
+    case 'remove': {
       const id = flags['id'];
-      if (typeof id !== 'string' || !id.trim()) throw new Usage(`track ${action} needs --id <suggestion id> (several: a,b)`);
+      if (typeof id !== 'string' || !id.trim()) throw new Usage(`track ${action} needs --id <${action === 'accept' || action === 'dismiss' ? 'suggestion' : 'tracked item'} id> (several: a,b)`);
       return { changes: { [action]: id.split(',').map((x) => x.trim()).filter(Boolean) }, errors: [] };
     }
     case 'morning': {
@@ -1255,15 +1334,18 @@ function cmdBody(flags: Record<string, string | true>, io: CliIo, pretty: boolea
 
 // ---------------------------------------------------------------- log: a session, a ladder level, a fixed top set
 
-const LOG_ACTIONS = ['add', 'ladder', 'fix'] as const;
+const LOG_ACTIONS = ['add', 'ladder', 'fix', 'show', 'edit', 'delete'] as const;
 type LogAction = (typeof LOG_ACTIONS)[number];
 
 /**
  * The coach's writes into fitness-log-data.json, as Pahlavan's Log panel
  * makes them (and the original log script did before): `add` a session (its checks,
  * its frozen exercise list and checklist, then the Workout habit's tick),
- * `ladder` a level, `fix` a logged lift. Each merges with the file as it is,
- * reads back, and is a dry run unless --write.
+ * `ladder` a level, `fix` a logged lift, `edit` a session (its changed
+ * fields, through the same writer with the session as its original, then
+ * the Workout tick) and `delete` one (the tick stays, as on the Log panel).
+ * `show` reads a session as `edit` takes it. Each write merges with the file
+ * as it is, reads back, and is a dry run unless --write.
  */
 function cmdLog(action: LogAction, flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
   const root = vaultRoot(flags, io);
@@ -1276,11 +1358,25 @@ function cmdLog(action: LogAction, flags: Record<string, string | true>, io: Cli
   const base = { action, file, today, dryRun: !write, written: false };
   // Before the first plan only a custom session can be logged (as Pahlavan's Log panel offers "Something else"); a ladder level or a fix needs the plan.
   const none = noPlanYet(read, action === 'add' ? 'only a custom session can be logged until there is one.' : `log ${action} needs the plan (its ladders and logged lifts).`);
-  if (none && action !== 'add') return out(envelope('log', base, read.data.warnings, [none]), pretty, 1);
+  if (none && (action === 'ladder' || action === 'fix')) return out(envelope('log', base, read.data.warnings, [none]), pretty, 1);
   const notes = none ? [none] : [];
   const plan = read.raw?.plan;
   const fail = (code: string, message: string, extra: Obj = {}) => out(envelope('log', { ...base, ...extra }, notes, [{ code, message }]), pretty, 1);
   const busy = () => fail('busy', `${file} kept changing while merging: run it again in a moment`);
+  // The Workout habit's tick for the day, add-only (never unticks), unless --no-habit: after an add or an edit, as the Log panel's save.
+  const tickWorkout = (date: string): string | null => {
+    if (flags['no-habit'] === true) return null;
+    const h = mergeHabit(io.readText(joinPath(root, paths().habits)), date);
+    if (h.result === 'ticked' && io.writeHabits) {
+      try {
+        io.writeHabits(root, h.text);
+        return 'ticked';
+      } catch (e) {
+        return `not ticked: ${(e as Error).message}`;
+      }
+    }
+    return h.result === 'already' ? 'already ticked' : `habits file unreadable: not ticked`;
+  };
   const lastSaved = (text: string | null, check: (doc: Obj) => boolean) => {
     try {
       const doc = JSON.parse(text ?? 'null') as unknown;
@@ -1313,19 +1409,7 @@ function cmdLog(action: LogAction, flags: Record<string, string | true>, io: Cli
       if (!lastSaved(io.readText(path), (doc) => Array.isArray(doc['sessions']) && (doc['sessions'] as Obj[]).some((x) => sessionKey(x) === key && JSON.stringify(x) === JSON.stringify(entry)))) {
         return fail('read-back', `${file} did not read back as written: check it before running again`, { result: 'added', session: entry });
       }
-      // The Workout habit's tick for the day, add-only (never unticks), unless --no-habit.
-      let habit: string | null = null;
-      if (flags['no-habit'] !== true) {
-        const h = mergeHabit(io.readText(joinPath(root, paths().habits)), entry['date'] as string);
-        if (h.result === 'ticked' && io.writeHabits) {
-          try {
-            io.writeHabits(root, h.text);
-            habit = 'ticked';
-          } catch (e) {
-            habit = `not ticked: ${(e as Error).message}`;
-          }
-        } else habit = h.result === 'already' ? 'already ticked' : `habits file unreadable: not ticked`;
-      }
+      const habit = tickWorkout(entry['date'] as string);
       return out(envelope('log', { ...report, written: true, ...(habit ? { habit } : {}) }, notes, []), pretty, 0);
     }
     return busy();
@@ -1352,6 +1436,76 @@ function cmdLog(action: LogAction, flags: Record<string, string | true>, io: Cli
         return last?.['level'] === level && last?.['date'] === date;
       })) return fail('read-back', `${file} did not read back as written: check it before running again`, report);
       return out(envelope('log', { ...report, written: true }, [], []), pretty, 0);
+    }
+    return busy();
+  }
+
+  if (action === 'show' || action === 'edit' || action === 'delete') {
+    const d = flags['date'];
+    const t = flags['type'];
+    if (typeof d !== 'string' || !isIsoDate(d) || typeof t !== 'string' || !t.trim()) throw new Usage(`log ${action} needs --date YYYY-MM-DD --type T [--label L] (the label names a custom session)`);
+    const l = flags['label'];
+    const sel: SessionSelector = { date: d, type: t.trim(), label: typeof l === 'string' && l.trim() ? l.trim() : null };
+    const key = selectorKey(sel);
+    const parse = (text: string | null): unknown => {
+      try {
+        return text === null ? null : (JSON.parse(text) as unknown);
+      } catch {
+        return undefined;
+      }
+    };
+    const has = (text: string | null, entry: Obj) => lastSaved(text, (doc) => Array.isArray(doc['sessions']) && (doc['sessions'] as Obj[]).some((x) => sessionKey(x) === sessionKey(entry) && JSON.stringify(x) === JSON.stringify(entry)));
+
+    if (action === 'show') {
+      if (write) throw new Usage('log show only reads: it takes no --write (log edit writes)');
+      const { session, sameDay } = findSession(read.raw?.log, sel);
+      if (!session) return out(envelope('log', { action, file, today, date: sel.date, type: sel.type }, notes, [{ code: 'missing', message: missingText(sel, sameDay) }]), pretty, 1);
+      return out(envelope('log', { action, file, today, session, ...editableSession(read, session) }, notes, []), pretty, 0);
+    }
+
+    let patch: unknown = null;
+    if (action === 'edit') {
+      const fileFlag = flags['file'];
+      if (typeof fileFlag !== 'string') throw new Usage('log edit needs --file <edit.json>: the fields to change, as log show gives them');
+      patch = readJson(io, fileFlag, 'edit file');
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const text = io.readText(path);
+      const doc = parse(text);
+      if (doc === undefined) return fail('unreadable', `${file} is not valid JSON`);
+      const { session, sameDay } = findSession(doc, sel);
+      if (!session) return fail('missing', missingText(sel, sameDay), { date: sel.date, type: sel.type });
+      const original = { key, json: JSON.stringify(session) };
+
+      if (action === 'delete') {
+        const m = mergeLog(text, null, { mode: 'delete', original });
+        if (m.result === 'unreadable') return fail('unreadable', m.error);
+        if (m.result === 'conflict') continue;
+        if (m.result !== 'deleted') return fail('invalid', `unexpected merge result: ${m.result}`);
+        const report = { ...base, result: 'deleted', session, note: 'The day\'s Workout tick stays, as on the Log panel.' };
+        if (!write) return out(envelope('log', report, notes, []), pretty, 0);
+        if (io.readText(path) !== text) continue;
+        io.writeLog!(root, m.text);
+        if (has(io.readText(path), session)) return fail('read-back', `${file} did not read back as written: check it before running again`, report);
+        return out(envelope('log', { ...report, written: true }, notes, []), pretty, 0);
+      }
+
+      const built = logEditEntry(read, session, patch, today);
+      if (!built.ok) return fail('invalid', built.error);
+      const entry = built.entry;
+      if (!built.changed.length) return out(envelope('log', { ...base, result: 'unchanged', changed: [], session }, notes, []), pretty, 0);
+      const m = mergeLog(text, entry, { mode: 'edit', original, ticks: { plan, today } });
+      if (m.result === 'unreadable') return fail('unreadable', m.error);
+      if (m.result === 'conflict') continue;
+      if (m.result === 'already') return fail('already', `${String(entry['type'])}${entry['label'] ? ` "${String(entry['label'])}"` : ''} is logged on ${dayText(String(entry['date']))} already: the edit would make two`);
+      if (m.result !== 'updated') return fail('invalid', `unexpected merge result: ${m.result}`);
+      const report = { ...base, result: 'updated', changed: built.changed, before: session, session: entry };
+      if (!write) return out(envelope('log', report, notes, []), pretty, 0);
+      if (io.readText(path) !== text) continue;
+      io.writeLog!(root, m.text);
+      if (!has(io.readText(path), entry)) return fail('read-back', `${file} did not read back as written: check it before running again`, report);
+      const habit = tickWorkout(entry['date'] as string);
+      return out(envelope('log', { ...report, written: true, ...(habit ? { habit } : {}) }, notes, []), pretty, 0);
     }
     return busy();
   }
@@ -1392,8 +1546,10 @@ function cmdLog(action: LogAction, flags: Record<string, string | true>, io: Cli
 
 /** Where the vault keeps Pahlavan's files: the folders, where they came from, and every path from them. Read only. */
 function cmdFolders(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
-  vaultRoot(flags, io);
-  return out(envelope('folders', { folders: folders(), source: foldersSource, settings: pahlavanSettingsPath(CONFIG_DIR), paths: paths() }, [], []), pretty, 0);
+  const root = vaultRoot(flags, io);
+  // Pahlavan is there when its files are (main.js or manifest.json in the plugins folder); without it, the coach works in chat.
+  const pahlavan = pluginVersion(io, root, CONFIG_DIR) !== null;
+  return out(envelope('folders', { folders: folders(), source: foldersSource, settings: pahlavanSettingsPath(CONFIG_DIR), pahlavan, paths: paths() }, [], []), pretty, 0);
 }
 
 // ---------------------------------------------------------------- the baseline note (a fresh start)
@@ -1491,6 +1647,237 @@ function cmdEating(flags: Record<string, string | true>, io: CliIo, pretty: bool
     return out(envelope('eating', { ...report, written: true }, plan.warnings, []), pretty, 0);
   }
   return out(envelope('eating', { ...base, result: null }, [], [{ code: 'busy', message: `${file} kept changing while merging: run it again in a moment` }]), pretty, 1);
+}
+
+// ---------------------------------------------------------------- meal (the coach's meal estimates)
+
+const MEAL_ACTIONS = ['add', 'show', 'delete', 'pending', 'discard'] as const;
+type MealAction = (typeof MEAL_ACTIONS)[number];
+const MEAL_FLAGS: Record<MealAction, readonly string[]> = { add: ['file', 'write', 'pending'], show: ['date', 'from', 'to'], delete: ['id', 'write'], pending: [], discard: ['pending', 'write'] };
+
+function cmdMeal(action: MealAction, flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  if (action === 'show') return cmdMealShow(flags, io, pretty);
+  if (action === 'delete') return cmdMealDelete(flags, io, pretty);
+  if (action === 'pending') return cmdMealPending(flags, io, pretty);
+  if (action === 'discard') return cmdMealDiscard(flags, io, pretty);
+  return cmdMealAdd(flags, io, pretty);
+}
+
+/** The --pending id, checked: the moment Pahlavan's form saved the meal (meal pending lists them). */
+function pendingFlag(flags: Record<string, string | true>, cmd: string): string | null {
+  const v = flags['pending'];
+  if (v === undefined) return null;
+  if (typeof v !== 'string' || !PENDING_ID.test(v)) throw new Usage(`${cmd} --pending takes a waiting meal's id, such as 2026-11-15T13-10-02 (meal pending lists them)`);
+  return v;
+}
+
+/** A waiting meal's files removed, its entry first; whether every one is gone (read back from the folder). */
+function removePendingFiles(io: CliIo, root: string, files: readonly string[]): { ok: boolean; error: string | null } {
+  const dir = joinPath(root, paths().pendingMeals);
+  try {
+    for (const f of files) io.removePending!(root, f);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  const left = io.listDir(dir) ?? [];
+  return { ok: files.every((f) => !left.includes(f)), error: null };
+}
+
+/**
+ * One meal the coach estimated, added to Coach/meals.json after the yes: the
+ * record checked, the day added up, and the Protein item ticked when the
+ * day's estimated protein reaches its goal (as `track tick` ticks it, with
+ * its linked habit). A dry run unless --write.
+ */
+function cmdMealAdd(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  const root = vaultRoot(flags, io);
+  const fileFlag = flags['file'];
+  if (typeof fileFlag !== 'string') throw new Usage('meal add needs --file <meal.json>: one meal, as the coach estimated it');
+  const write = flags['write'] === true;
+  const pendingId = pendingFlag(flags, 'meal add');
+  if (write && (!io.writeMeals || !io.writeTracking || !io.writeHabits)) throw new Usage('this engine cannot write (no meals, tracking or habits writer)');
+  if (write && pendingId && !io.removePending) throw new Usage('this engine cannot remove a waiting meal (no remover)');
+  const today = io.today();
+  const file = paths().meals;
+  const given = readJson(io, fileFlag, 'meal file');
+  const path = joinPath(root, file);
+  const trackingPath = joinPath(root, paths().tracking);
+  const habitsPath = joinPath(root, paths().habits);
+  const pendingDir = paths().pendingMeals;
+  const pendingPath = pendingId ? joinPath(root, `${pendingDir}/${pendingFile(pendingId)}`) : null;
+  const clock = io.clock?.();
+  const at = clock ? toTs(momentAt(today, clock.minutes, clock.offsetMinutes).ms) : undefined;
+  const base = { action: 'add', file, today, dryRun: !write, written: false };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const mText = io.readText(path);
+    // The waiting meal this records (--pending): its entry must be there; its files go once the meal is saved.
+    const pText = pendingPath ? io.readText(pendingPath) : null;
+    if (pendingId && pText === null) return out(envelope('meal', { ...base, result: null }, [], [{ code: 'not-found', message: `No waiting meal ${pendingId} in ${pendingDir}: \`meal pending\` lists them (\`meal discard --pending ${pendingId}\` clears a photo left behind)` }]), pretty, 1);
+    const pendingFiles = pendingId ? pendingFilesOf(io.listDir(joinPath(root, pendingDir)), pendingId) : [];
+    const read = readVault(io, root, { asOf: today });
+    const plan = planMealAdd({ existingText: mText, given, today, counting: read.data.eatingPlan?.counting ?? null });
+    if (plan.errors.length || !plan.doc || !plan.meal) return out(envelope('meal', { ...base, result: null }, plan.warnings, plan.errors), pretty, 1);
+    const warnings = [...plan.warnings];
+    if (pendingId && pText !== null) {
+      const waiting = readPending([pendingFile(pendingId)], () => pText).meals[0];
+      if (waiting && waiting.entry.date !== plan.meal.date) warnings.push({ code: 'pending-date', message: `The waiting meal was saved for ${waiting.entry.date}; this meal is dated ${plan.meal.date}. Fine when the user corrected the day; otherwise use the form's date.` });
+    }
+    const pending = pendingId ? { id: pendingId, files: pendingFiles.map((f) => `${pendingDir}/${f}`), removed: false } : undefined;
+    const date = plan.meal.date;
+    const day = dayTotals(plan.doc.meals, date);
+    // The Protein item, ticked once the day's estimated protein reaches its goal (the item's grams, else the eating plan's floor).
+    const tr = readTracking(io, root, { configDir: CONFIG_DIR });
+    const item = proteinItemOf(read.data.eatingPlan, tr.tracking?.items ?? []);
+    const goalG = item?.goal?.amount ?? read.data.eatingPlan?.protein.floorG ?? null;
+    let tick: 'added' | 'already' | 'short' | 'no-item' | 'no-goal' | 'not-ticked' = item ? (goalG === null ? 'no-goal' : day.proteinG < goalG ? 'short' : 'added') : 'no-item';
+    let ops: Parameters<typeof mergeTracking>[1] = [];
+    let habitChanges: Parameters<typeof mergeHabitChanges>[1] = [];
+    if (tick === 'added' && item) {
+      const pt = planTick(readVault(io, root, { asOf: date }).data, tr, { ids: [item.id], date, done: true, ...(at ? { at } : {}) }, today);
+      if (pt.errors.length) {
+        tick = 'not-ticked';
+        warnings.push({ code: 'protein-tick', message: `The day reaches ${item.name}'s goal, but it could not be ticked: ${pt.errors.map((e) => e.message).join('; ')}` });
+      } else if (pt.results[0]?.result === 'unchanged') tick = 'already';
+      else {
+        ops = pt.ops;
+        habitChanges = pt.habits;
+      }
+    }
+    const protein = { item: item?.id ?? null, goalG, totalG: day.proteinG, tick };
+    const report = { ...base, result: plan.action, meal: plan.meal, day, protein, ...(pending ? { pending } : {}) };
+    if (!write) return out(envelope('meal', report, warnings, []), pretty, 0);
+    if (plan.action === 'already') {
+      // Recorded before (a run that stopped before the removal): the waiting meal's files go now.
+      if (!pending) return out(envelope('meal', report, warnings, []), pretty, 0);
+      const rm = removePendingFiles(io, root, pendingFiles);
+      if (!rm.ok) return out(envelope('meal', report, warnings, [{ code: 'pending-remove', message: `The meal was in ${file} already, but the waiting meal's files could not be removed${rm.error ? ` (${rm.error})` : ''}: run \`meal discard --pending ${pendingId} --write\`` }]), pretty, 1);
+      return out(envelope('meal', { ...report, pending: { ...pending, removed: true } }, warnings, []), pretty, 0);
+    }
+    const tText = io.readText(trackingPath);
+    const hText = io.readText(habitsPath);
+    const t = ops.length ? mergeTracking(tText, ops) : ({ result: 'unchanged' } as const);
+    if (t.result === 'unreadable' || t.result === 'invalid' || t.result === 'conflict') {
+      const why = t.result === 'unreadable' ? t.error : t.result === 'invalid' ? t.errors.join('; ') : `${paths().tracking} changed while merging`;
+      return out(envelope('meal', report, warnings, [{ code: 'tracking', message: `${why}: the Protein tick could not be merged, so nothing is written` }]), pretty, 1);
+    }
+    const h = habitChanges.length ? mergeHabitChanges(hText, habitChanges) : ({ result: 'unchanged', skipped: [] } as const);
+    if (h.result === 'unreadable') return out(envelope('meal', report, warnings, [{ code: 'habits', message: `${h.error}: the linked habit could not be ticked, so nothing is written` }]), pretty, 1);
+    for (const sk of h.skipped) warnings.push({ code: 'habit-skipped', message: `The ${sk.habit} habit was skipped: ${sk.why}` });
+    if (io.readText(path) !== mText || io.readText(trackingPath) !== tText || io.readText(habitsPath) !== hText || (pendingPath && io.readText(pendingPath) !== pText)) continue; // changed since the merge: merge again
+    io.writeMeals!(root, plan.text!);
+    if (!mealLanded(io.readText(path), plan.meal.id)) return out(envelope('meal', report, warnings, [{ code: 'read-back', message: `${file} did not read back as written: check it before running again` }]), pretty, 1);
+    // The meal is saved: the waiting meal it records goes, before the tick (a failure here leaves the meal and says how to clear it).
+    let written: typeof report = report;
+    if (pending) {
+      const rm = removePendingFiles(io, root, pendingFiles);
+      if (!rm.ok) return out(envelope('meal', { ...report, written: true }, warnings, [{ code: 'pending-remove', message: `The meal is saved, but the waiting meal's files could not be removed${rm.error ? ` (${rm.error})` : ''}: run \`meal discard --pending ${pendingId} --write\`, then check the Protein tick` }]), pretty, 1);
+      written = { ...report, pending: { ...pending, removed: true } };
+    }
+    if (t.result === 'merged') {
+      io.writeTracking!(root, t.text);
+      if (!landed(io.readText(trackingPath), t.check)) return out(envelope('meal', { ...written, written: true }, warnings, [{ code: 'read-back', message: `${paths().tracking} did not read back as written: the meal is saved; check the Protein tick` }]), pretty, 1);
+    }
+    if (h.result === 'merged') {
+      io.writeHabits!(root, h.text);
+      if (!habitsLanded(io.readText(habitsPath), h.changed)) return out(envelope('meal', { ...written, written: true }, warnings, [{ code: 'read-back', message: `${paths().habits} did not read back as written: the meal is saved; check the Protein habit` }]), pretty, 1);
+    }
+    return out(envelope('meal', { ...written, written: true }, warnings, []), pretty, 0);
+  }
+  return out(envelope('meal', { ...base, result: null }, [], [{ code: 'busy', message: `${file} or the tracking files kept changing while merging: run it again in a moment` }]), pretty, 1);
+}
+
+/** The meals of a day (--date, default today) or of a span (--from and --to, up to 62 days), each day with its totals. Read only. */
+function cmdMealShow(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  const root = vaultRoot(flags, io);
+  const span = flags['from'] !== undefined || flags['to'] !== undefined;
+  if (span && flags['date'] !== undefined) throw new Usage('meal show takes --date, or --from and --to, not both');
+  if (span && (flags['from'] === undefined || flags['to'] === undefined)) throw new Usage('meal show needs both --from and --to');
+  const from = span ? dateFlag(flags, 'from', io) : dateFlag(flags, 'date', io);
+  const to = span ? dateFlag(flags, 'to', io) : from;
+  if (to < from) throw new Usage('--to is before --from');
+  if (daysBetween(from, to) > 61) throw new Usage('meal show spans 62 days at most');
+  const file = paths().meals;
+  const m = readMeals(io.readText(joinPath(root, file)));
+  const days = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) days.push({ ...dayTotals(m.meals, d), list: m.meals.filter((x) => x.date === d) });
+  const report = { file, state: m.state, from, to, days, note: 'Every number is the coach\'s estimate (by: coach): say "about", never as measured.' };
+  return out(envelope('meal', report, [], m.error ? [m.error] : []), pretty, m.error ? 1 : 0);
+}
+
+/** A meal taken out of Coach/meals.json by its id; the day's Protein tick stays. A dry run unless --write. */
+function cmdMealDelete(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  const root = vaultRoot(flags, io);
+  const idFlag = flags['id'];
+  if (typeof idFlag !== 'string' || !idFlag.trim()) throw new Usage('meal delete needs --id <meal id> (meal show lists them)');
+  const write = flags['write'] === true;
+  if (write && !io.writeMeals) throw new Usage('this engine cannot write (no meals writer)');
+  const file = paths().meals;
+  const path = joinPath(root, file);
+  const base = { action: 'delete', file, id: idFlag, dryRun: !write, written: false };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const mText = io.readText(path);
+    const plan = planMealDelete({ existingText: mText, id: idFlag });
+    if (plan.errors.length || !plan.doc || !plan.meal) return out(envelope('meal', { ...base, result: null }, [], plan.errors), pretty, 1);
+    const day = dayTotals(plan.doc.meals, plan.meal.date);
+    const report = { ...base, result: plan.action, meal: plan.meal, day, note: 'The day\'s Protein tick stays as it is: untick it with `track tick --done false` if the day no longer reaches the goal.' };
+    if (!write) return out(envelope('meal', report, [], []), pretty, 0);
+    if (io.readText(path) !== mText) continue;
+    io.writeMeals!(root, plan.text!);
+    if (!mealLanded(io.readText(path), idFlag, true)) return out(envelope('meal', report, [], [{ code: 'read-back', message: `${file} did not read back as written: check it before running again` }]), pretty, 1);
+    return out(envelope('meal', { ...report, written: true }, [], []), pretty, 0);
+  }
+  return out(envelope('meal', { ...base, result: null }, [], [{ code: 'busy', message: `${file} kept changing: run it again in a moment` }]), pretty, 1);
+}
+
+/**
+ * The meals waiting for the coach's estimate (Pahlavan's meal form): each
+ * one's words and photo, never a number. Read only.
+ */
+function cmdMealPending(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  const root = vaultRoot(flags, io);
+  const dir = paths().pendingMeals;
+  const names = io.listDir(joinPath(root, dir));
+  const r = readPending(names, (f) => io.readText(joinPath(root, `${dir}/${f}`)));
+  const meals = r.meals.map((m) => ({
+    id: m.id,
+    file: `${dir}/${m.file}`,
+    date: m.entry.date,
+    at: m.entry.at ?? null,
+    text: m.entry.text ?? null,
+    photo: m.photo ? `${dir}/${m.photo}` : null,
+    photoFound: m.photoFound,
+    made: m.entry.made,
+  }));
+  const warnings = [
+    ...r.refused.map((x) => ({ code: 'pending-invalid', message: `${dir}/${x.file} is not a waiting meal: ${x.reason}` })),
+    ...r.meals.filter((m) => m.photo && !m.photoFound).map((m) => ({ code: 'photo-missing', message: `${m.id}'s photo is not here (photos stay out of git, so it may be on the other Mac): estimate it from the words, and say so` })),
+  ];
+  const report = {
+    folder: dir,
+    state: names === null ? 'missing' : 'found',
+    meals,
+    refused: r.refused.map((x) => ({ ...x, file: `${dir}/${x.file}` })),
+    strays: r.strays.map((f) => `${dir}/${f}`),
+    note: 'Each is the user\'s own words and photo, never a number: estimate it (meal.md), then record it with `meal add --file <meal.json> --pending <id>`.',
+  };
+  return out(envelope('meal', report, warnings, []), pretty, 0);
+}
+
+/** A waiting meal not to record: its file and its photo removed. A dry run unless --write. */
+function cmdMealDiscard(flags: Record<string, string | true>, io: CliIo, pretty: boolean): CliResult {
+  const root = vaultRoot(flags, io);
+  const id = pendingFlag(flags, 'meal discard');
+  if (!id) throw new Usage('meal discard needs --pending <id> (meal pending lists them)');
+  const write = flags['write'] === true;
+  if (write && !io.removePending) throw new Usage('this engine cannot remove a waiting meal (no remover)');
+  const dir = paths().pendingMeals;
+  const files = pendingFilesOf(io.listDir(joinPath(root, dir)), id);
+  const base = { action: 'discard', id, files: files.map((f) => `${dir}/${f}`), dryRun: !write, written: false };
+  if (!files.length) return out(envelope('meal', { ...base, result: null }, [], [{ code: 'not-found', message: `No waiting meal ${id} in ${dir}: \`meal pending\` lists them` }]), pretty, 1);
+  if (!write) return out(envelope('meal', { ...base, result: 'discarded' }, [], []), pretty, 0);
+  const rm = removePendingFiles(io, root, files);
+  if (!rm.ok) return out(envelope('meal', { ...base, result: null }, [], [{ code: 'pending-remove', message: `The waiting meal's files could not all be removed${rm.error ? ` (${rm.error})` : ''}: check ${dir}` }]), pretty, 1);
+  return out(envelope('meal', { ...base, result: 'discarded', written: true }, [], []), pretty, 0);
 }
 
 // ---------------------------------------------------------------- track day and track tick (the daily wrap-up)
@@ -1754,6 +2141,12 @@ export function run(argv: readonly string[], io?: CliIo): CliResult {
     if (wrong.length) return usage(`track ${action} does not take ${wrong.map((f) => `--${f}`).join(', ')}`);
   } else if (args.command === 'log') {
     if (args.positionals.length !== 1 || !(LOG_ACTIONS as readonly string[]).includes(args.positionals[0]!)) return usage(`log takes one of: ${LOG_ACTIONS.join(', ')}`);
+  } else if (args.command === 'meal') {
+    const action = args.positionals[0];
+    if (args.positionals.length !== 1 || !(MEAL_ACTIONS as readonly string[]).includes(action!)) return usage(`meal takes one of: ${MEAL_ACTIONS.join(', ')}`);
+    const allowedHere = ['vault', ...MEAL_FLAGS[action as MealAction]];
+    const wrong = Object.keys(args.flags).filter((f) => !allowedHere.includes(f) && !GLOBAL_FLAGS.includes(f));
+    if (wrong.length) return usage(`meal ${action} does not take ${wrong.map((f) => `--${f}`).join(', ')}`);
   } else if (args.command !== 'validate' && args.positionals.length) return usage(`${args.command} takes no positional arguments: ${args.positionals.join(' ')}`);
   if (!io) return usage('this command needs file access (run the built engine.cjs)');
 
@@ -1798,6 +2191,8 @@ export function run(argv: readonly string[], io?: CliIo): CliResult {
         return cmdBaseline(args.flags, io, pretty);
       case 'eating':
         return cmdEating(args.flags, io, pretty);
+      case 'meal':
+        return cmdMeal(args.positionals[0] as MealAction, args.flags, io, pretty);
       case 'inbox':
         return args.flags['phone'] === true ? cmdInboxPhone(args.flags, io, pretty) : cmdInbox(args.flags, io, pretty);
       default: {

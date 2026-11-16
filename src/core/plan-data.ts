@@ -3,6 +3,7 @@
 // the file and calls the parsers here.
 
 import { isIsoDate, mondayOf } from './dates.ts';
+import type { GripId } from './data/exercises.ts';
 import { DELOAD } from './deload.ts';
 import type { IsoDate, MuscleTags, RepRange, TimedWork, Unit, Weekday } from './schema.ts';
 import { readTimed, timedFromText, timedSets } from './timed.ts';
@@ -630,6 +631,8 @@ export interface SlotExtras {
 export interface ExerciseExtras {
   _guide?: PlanDataGuide;
   _lift?: PlanDataLift;
+  /** The grip its name gives a catalogue movement with grips (`gripOf`); left out for the rest. */
+  _grip?: GripId;
 }
 
 /**

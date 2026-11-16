@@ -56,7 +56,26 @@ The `/fitness-coach` skill in Claude Code:
 - **Plan:** the coach designs your plan from your answers and the evidence (a new plan from a blank page, never an edit of the old one): at least three options, each measured and checked by the engine, with the evidence and its grade for each choice, and the plan's standing rules written with it.
 - **Sunday check-in:** reads your week and writes you a short letter with one thing to focus on.
 - **Reviews, progress reports, an eating plan and habit suggestions**, when you want them.
+- **Meals from a photo or a description:** the coach estimates protein, calories, fiber, fat and carbs, saves the meal after your yes (never the photo), and ticks Protein when the day reaches your target. In Obsidian, **Log a meal** saves a meal with a photo for the coach to estimate later, and the Food tab's Meals card shows the day's estimates.
 - **Logging and questions:** tell it what you did, or ask how things are going.
+
+Each job has its command, and plain words work too:
+
+| Type | For |
+|---|---|
+| `/fitness-coach intake` | The first time, or a fresh start |
+| `/fitness-coach plan` | Your plan, and any change to it (travel, soreness, a short day, an injury, the next month); `plan why` for its reasons |
+| `/fitness-coach today` | The morning: today's session, what's due, a short check-in |
+| `/fitness-coach log` | A session, a ladder level, a fix, a change or a delete |
+| `/fitness-coach checkin` | Sundays: the week's review and your letter; mid-week, next week's targets |
+| `/fitness-coach review` | The check-in that ends a light week, and each phase review |
+| `/fitness-coach progress` | New photos, or a dated progress report |
+| `/fitness-coach diet` | An eating plan, and questions about protein |
+| `/fitness-coach meal` | A meal from a photo or your words |
+| `/fitness-coach habits` | Daily items: creatine, water, stand-ups, your own; add, change, pause or stop one |
+| `/fitness-coach ask` | Questions about your own data |
+
+The [user guide](docs/user-guide.md#the-coach-and-its-jobs) has examples of what to say for each.
 
 ### The coach in action
 
@@ -76,7 +95,7 @@ Recorded from real sessions in a demo vault, with a made-up athlete: Sam, 34, at
 
 ### Built on research, and honest about it
 
-The coach's rules live in one file, each with where it comes from: **98 linked sources**, most of them from 2020 or later, from meta-analyses and reviews to trials. The rules that shape a plan (volume per muscle, effort in reps in reserve, load, rest, exercise order, progression, light weeks, cardio alongside lifting) were checked against 62 sources, each one read. Rules are graded: **strong** (consistent meta-analyses), **moderate** or **weak**, and a rule that's only a sensible default is called a **heuristic**, not dressed up as science. When the coach proposes your plan, each major choice comes with its evidence and its grade.
+The coach's rules live in one file, each with where it comes from: **101 linked sources**, most of them from 2020 or later, from meta-analyses and reviews to trials. The rules that shape a plan (volume per muscle, effort in reps in reserve, load, rest, exercise order, progression, light weeks, cardio alongside lifting) were checked against 62 sources, each one read. Rules are graded: **strong** (consistent meta-analyses), **moderate** or **weak**, and a rule that's only a sensible default is called a **heuristic**, not dressed up as science. When the coach proposes your plan, each major choice comes with its evidence and its grade.
 
 - **The evidence is data.** The engine holds the graded rules and the exercises to choose from, and the coach designs from them; the numbers the engine checks a plan with are the ones it gives the coach, and a self-check, run each time the coach is built, fails when its docs say otherwise.
 - **Muscle regions only where studies show them.** Parts of a muscle are modelled only where MRI and ultrasound training studies support them (none is graded strong). Popular ideas without that support, such as the inner chest or the VMO, are explained with the nearest supported option, not planned for, and a lagging part is your word, never read from a photo.
@@ -94,7 +113,7 @@ The plugin and the coach read and write the same files in your vault, and both g
 ## What you need
 
 - **Obsidian on a computer,** version 1.7.2 or later. Pahlavan is desktop only, built and tested on macOS. Sitting time from your keyboard and mouse, and turning dropped photos into JPEG, work only on a Mac.
-- **For the coach:** Claude Code, which needs a Claude plan that includes it, and [Node.js](https://nodejs.org) 18 or later.
+- **For the coach:** Claude Code, which needs a Claude plan that includes it, and [Node.js](https://nodejs.org) 18 or later. The coach also works without Obsidian: see [Without Obsidian](#without-obsidian).
 
 ## Install
 
@@ -105,16 +124,31 @@ The plugin and the coach read and write the same files in your vault, and both g
 
 ![The welcome card: six first steps, from setting up the coach to the first Sunday check-in, each with its command](docs/images/welcome.png)
 
-1. Open Pahlavan from the ribbon or the command palette (**Pahlavan: Open**). Today shows a welcome card with your first steps.
+1. Open Pahlavan from the ribbon or the command palette (type **Pahlavan**, then **Open**). Today shows a welcome card with your first steps.
 2. **Set up the coach:** the first step's button copies the coach into your vault (`.claude/skills/fitness-coach/`). It's also under **Settings → Pahlavan → Coach**.
 3. Open Claude Code in your vault's folder and type `/fitness-coach intake`. Answer its questions; it writes your profile.
 4. Type `/fitness-coach plan`. The coach designs your plan and, once you say yes, writes it. Today shows your first session.
 
-Each step ticks itself once its file is there. The [user guide](docs/user-guide.md) walks through every screen, and the [exercise catalogue](docs/exercise-catalogue.md) lists the 245 movements the coach chooses from, with how to do each (the command **Pahlavan: Write the exercise catalogue** puts the same list in your vault).
+Each step ticks itself once its file is there. The [user guide](docs/user-guide.md) walks through every screen, and the [exercise catalogue](docs/exercise-catalogue.md) lists the 245 movements the coach chooses from, with how to do each (the command **Write the exercise catalogue**, under Pahlavan in the command palette, puts the same list in your vault).
+
+## Without Obsidian
+
+The coach works on its own in Claude Code, in a plain folder: no Obsidian and no plugin. You get the whole coach in chat (the intake, your plan and its reasons, logging, a morning check-in, the Sunday check-in and letter, the reviews, an eating plan and daily habits), with the same engine and the same files. You don't get the screens, the charts or the reminder cards, so you start each step yourself.
+
+1. Download `pahlavan-coach-<version>.zip` from the [latest release](../../releases/latest) and double-click it. You get a `Pahlavan` folder with the coach inside.
+2. Open that folder in Claude Code and type `/fitness-coach intake`.
+
+Then, each with its command: every morning `/fitness-coach today` (today's session, what's due, a short morning check-in), after training `/fitness-coach log`, and on Sundays `/fitness-coach checkin`. Stand-ups and sitting time need Pahlavan (it counts them from your keyboard and mouse), so the coach leaves them out.
+
+To add the screens later, open the same folder as a vault in Obsidian and install Pahlavan: it reads the same files.
+
+New to Claude Code or the terminal? [Pahlavan without Obsidian](docs/without-obsidian.md) walks through it step by step: installing Node.js and Claude Code, opening the folder, the intake, your plan and your first week.
 
 ## Questions
 
 **Do I need Claude Code?** The screens open without it, but your plan comes from the coach's intake and plan steps, so you need it to use Pahlavan fully.
+
+**Do I need Obsidian?** No. The coach works on its own in Claude Code ([Without Obsidian](#without-obsidian)); Obsidian with Pahlavan adds the screens, the charts and the reminders.
 
 **What does it cost?** Pahlavan is free during the beta. 1.0 will be paid, and everyone who installs before 1.0 keeps it free: Pahlavan records the day it was first installed in your vault (nothing leaves your Mac), and its Settings tab shows it. Claude Code comes with Anthropic's Claude plans, which are separate from Pahlavan.
 

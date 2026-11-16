@@ -25,7 +25,7 @@ import type { Exercise, ExerciseSlot, IsoDate, RepRange, SessionTemplate, TimedW
 import { halfTimed, timedMinutes, timedSets, timedView, type TimedView } from '../core/timed.ts';
 import { sorenessForSlot } from '../core/soreness.ts';
 import { expressVariant, halveSr, hotelVariant, shortExpressVariant, travelEquipment, type SessionMode, type VariantSlot } from '../core/variant.ts';
-import { buildReview, calibrationOf, context, dayKindOn, ledgerConstraints, nameOf, sessionLabel } from './review.ts';
+import { buildReview, calibrationOf, context, dayKindOn, ledgerConstraints, liftAtSlot, nameOf, sessionLabel } from './review.ts';
 
 export interface SessionItem {
   exercise: string;
@@ -289,7 +289,11 @@ export function buildSession(data: VaultData, date: IsoDate, mode: SessionMode, 
     }
 
     // 5. The target, in the exercise's own unit, for a planned exercise with a logged history.
-    const lift = !replaces ? review.lifts.find((l) => l.exercise === exercise) : undefined;
+    const reviewed = !replaces ? review.lifts.find((l) => l.exercise === exercise) : undefined;
+    // The review answers per exercise, from its first slot this week: an exercise in two sessions with other rep
+    // ranges gets this row's own target, from this row's plan item.
+    const sameRange = (x: readonly number[] | null | undefined, y: readonly number[]) => Boolean(x) && x![0] === y[0] && x![1] === y[1];
+    const lift = reviewed && own && !own.timed && reviewed.repRange && !sameRange(reviewed.repRange, own.repRange) ? liftAtSlot(data, date, review, exercise, own) : reviewed;
     let target: SessionItem['target'] = null;
     if (lift?.next?.value && typeof lift.next.value === 'object') {
       const n = ((lift.returnAdjusted?.value ?? lift.next.value) as { weight: number | null; unit: string; reps: number; rir: number; action: string });

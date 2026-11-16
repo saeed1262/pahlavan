@@ -16,7 +16,7 @@ import { isProteinItem, type ProteinTarget } from '../core/protein.ts';
 import { ITEM_KINDS, ITEM_SLOTS, type BodyRecordSchedule, type ItemKind, type ItemSlot, type ItemSuggestion, type MorningReminder, type TrackedItem, type Tracking } from '../core/schema.ts';
 import { validateTracking } from '../core/validate.ts';
 import { hm } from '../core/sitting.ts';
-import { acceptOps, bodyScheduleOps, dismissOps, earlierFor, itemFromForm, itemId, morningOps, newForm, withWhen } from './item-form.ts';
+import { acceptOps, bodyScheduleOps, dismissOps, earlierFor, itemFromForm, itemId, morningOps, newForm, pausedItem, resumedItem, saveOps, withWhen } from './item-form.ts';
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -52,6 +52,11 @@ export interface TrackChanges {
   /** Suggestion ids to accept or dismiss, as the chips do. */
   accept?: string[];
   dismiss?: string[];
+  /** Tracked item ids to pause from today or resume from today, as the Habits screen's Pause and Resume do (the history stays). */
+  pause?: string[];
+  resume?: string[];
+  /** Tracked item ids to take out, as the Habits screen's Remove does: the item and its day records in tracking.json go. */
+  remove?: string[];
   /** The morning check-in's reminder; a missing field keeps its value (on defaults to true with a time). */
   morning?: { on?: boolean; at?: string };
   /** The body record's schedule: `plan`, or `fixed` with its four fields. */
@@ -62,17 +67,17 @@ export interface TrackChanges {
   protein?: boolean;
 }
 
-export const CHANGE_KEYS = ['suggest', 'add', 'decline', 'accept', 'dismiss', 'morning', 'bodyRecord', 'bringOver', 'protein'] as const;
+export const CHANGE_KEYS = ['suggest', 'add', 'decline', 'accept', 'dismiss', 'pause', 'resume', 'remove', 'morning', 'bodyRecord', 'bringOver', 'protein'] as const;
 /** The ItemInput keys that are not a tracked item's fields. */
 const INPUT_ONLY = ['why', 'from', 'by', 'again'];
 /** A tracked item's fields an input may set (id, kind, name, source handled apart). */
 const ITEM_FIELDS = ['schedule', 'start', 'when', 'whenDetail', 'reminder', 'habit', 'note', 'dose', 'means', 'goal', 'amount', 'standup', 'sitting', 'desk'] as const;
 const CONFIG_FIELDS = ['amount', 'standup', 'sitting', 'desk'] as const;
 
-export type TrackResultKind = 'added' | 'updated' | 'suggested' | 'accepted' | 'dismissed' | 'declined' | 'set' | 'recorded' | 'skipped' | 'unchanged';
+export type TrackResultKind = 'added' | 'updated' | 'suggested' | 'accepted' | 'dismissed' | 'declined' | 'paused' | 'resumed' | 'removed' | 'set' | 'recorded' | 'skipped' | 'unchanged';
 
 export interface TrackResult {
-  what: 'suggest' | 'add' | 'decline' | 'accept' | 'dismiss' | 'morning' | 'bodyRecord' | 'bringOver' | 'protein';
+  what: 'suggest' | 'add' | 'decline' | 'accept' | 'dismiss' | 'pause' | 'resume' | 'remove' | 'morning' | 'bodyRecord' | 'bringOver' | 'protein';
   id?: string;
   result: TrackResultKind;
   note: string;
@@ -142,7 +147,7 @@ export function planTrack(changes: TrackChanges, ctx: TrackContext): TrackPlan {
 
   const lists = { suggest: changes.suggest, add: changes.add, decline: changes.decline } as const;
   for (const [k, v] of Object.entries(lists)) if (v !== undefined && !Array.isArray(v)) err('changes', `${k} must be a list of items`);
-  for (const k of ['accept', 'dismiss', 'bringOver'] as const) {
+  for (const k of ['accept', 'dismiss', 'pause', 'resume', 'remove', 'bringOver'] as const) {
     const v = changes[k];
     if (v !== undefined && !(Array.isArray(v) && v.every((x) => typeof x === 'string'))) err('changes', `${k} must be a list of ids`);
   }
@@ -245,7 +250,7 @@ export function planTrack(changes: TrackChanges, ctx: TrackContext): TrackPlan {
     }
     const item = built.item;
     if (items.has(item.id)) {
-      warnings.push({ code: 'already-tracked', message: `${item.name} (${item.id}) is tracked: declining a suggestion does not remove it (the user removes it in Pahlavan).` });
+      warnings.push({ code: 'already-tracked', message: `${item.name} (${item.id}) is tracked: declining a suggestion does not remove it (track remove does, after the user's yes).` });
       results.push({ what: 'decline', id: item.id, result: 'skipped', note: 'tracked' });
       continue;
     }
@@ -291,12 +296,42 @@ export function planTrack(changes: TrackChanges, ctx: TrackContext): TrackPlan {
       continue;
     }
     if (sg.state === 'accepted') {
-      err('accepted', `${sg.item.name} was accepted on ${sg.decided ?? sg.on} and is tracked: the user pauses or removes it in Pahlavan`);
+      err('accepted', `${sg.item.name} was accepted on ${sg.decided ?? sg.on} and is tracked: pause it (track pause) or remove it (track remove) instead`);
       continue;
     }
     ops.push(...dismissOps(sg, today));
     suggestions.set(id, { ...sg, state: 'dismissed', decided: today });
     results.push({ what: 'dismiss', id, result: 'dismissed', note: `${sg.item.name}: dismissed, not proposed again without new data` });
+  }
+
+  // ---- pause, resume and remove a tracked item, as the Habits screen's buttons do
+  const trackedIds = () => [...items.keys()].join(', ') || 'none';
+  for (const what of ['pause', 'resume'] as const) {
+    for (const id of changes[what] ?? []) {
+      const item = items.get(id);
+      if (!item) {
+        err('unknown-item', `no tracked item with the id ${id} (tracked: ${trackedIds()})`);
+        continue;
+      }
+      const next = what === 'pause' ? pausedItem(item, today) : resumedItem(item, today);
+      if (same(item, next)) {
+        results.push({ what, id, result: 'unchanged', note: what === 'pause' ? `${item.name} is paused already` : `${item.name} is not paused` });
+        continue;
+      }
+      ops.push(...saveOps(next, item));
+      items.set(id, next);
+      results.push({ what, id, result: what === 'pause' ? 'paused' : 'resumed', note: what === 'pause' ? `${item.name} paused from ${today}: not due and no reminders until it is resumed; its history stays` : `${item.name} resumed from ${today}; the paused days stay paused` });
+    }
+  }
+  for (const id of changes.remove ?? []) {
+    const item = items.get(id);
+    if (!item) {
+      err('unknown-item', `no tracked item with the id ${id} (tracked: ${trackedIds()})`);
+      continue;
+    }
+    ops.push({ op: 'remove-item', id, baseline: item });
+    items.delete(id);
+    results.push({ what: 'remove', id, result: 'removed', note: `${item.name} removed, with its ticks and amounts in tracking.json${item.habit ? ` (the linked habit "${item.habit}" keeps its check-ins)` : ''}; pausing would keep its history` });
   }
 
   // ---- the settings

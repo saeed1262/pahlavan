@@ -73,7 +73,8 @@ schedule and slot, Why, grade), then one multi-select AskUserQuestion to
 accept. Nothing is added before the yes. Then one write through the engine
 ("The tracking file" below): the accepted items with `add`, the others with
 `decline`; or, when the user would rather decide in Pahlavan, all of them
-with `suggest`.
+with `suggest` (without Pahlavan there are no chips: decide in the
+conversation, SKILL.md, "Without Pahlavan").
 
 ## What to ask
 
@@ -348,6 +349,10 @@ no Why, and leaves the advice to the dentist or the doctor.
 | Desk work and a posture emphasis (Body assessment), a desk ache (Ledger), or the posture goal | Desk breaks, from the plan |
 | Can't stand or walk easily | No stand-ups; desk breaks with seated moves **(H)** |
 
+**Without Pahlavan** nothing counts sitting time, stand-ups or desk breaks
+(Pahlavan reads the computer's activity): suggest none of the three, and give
+the activity advice below instead.
+
 **The bigger lever for heavy sitters is activity.** About 60–75 minutes a day
 of moderate activity seemed to remove the higher death risk of sitting 8 h or
 more in pooled cohorts (Ekelund 2016, observational), and WHO advises doing
@@ -506,6 +511,12 @@ promise about a test result, never "fix your posture".
 | Met on most days for 8 weeks | Offer to turn the reminder off and keep the item, or drop it **(H)** |
 | The trigger is gone (a job on their feet, sleep at 7 h+, lifting stopped) | Offer to drop or re-size it |
 | Health changes (new diagnosis, medicine, pregnancy, injury) or re-screening | The safety screen again for every item; pause flagged supplements and say why; the user decides about their own items |
+
+**A stop:** offer `track pause` first (not due, no reminders; the history
+stays, and `track resume` brings it back), then `track remove` if the user
+wants it gone (the item and its ticks and amounts in `tracking.json` go).
+Each a dry run, then `--write` after the yes; a coach item's stop gets its
+Decisions entry.
 
 Missed days get the next step, never a tally (`rules.md`, no streaks), even
 though Pahlavan shows streaks.

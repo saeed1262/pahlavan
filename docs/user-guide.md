@@ -2,7 +2,7 @@
 
 Pahlavan is a training coach that lives in your Obsidian vault. It has two parts that work on the same files. The **plugin** is a tab in Obsidian with seven screens (Home, Today, Progress, Plan, Check-in, Food and Movements) and reminder cards that pop up through the day. The **coach** is an AI skill you run in Claude Code with `/fitness-coach`: it interviews you, designs your plan, reviews your week and writes you a letter every Sunday. Behind both is the **engine**: it does every calculation (sets per muscle, targets, readiness), checks every plan against the safety rules and the evidence, and holds the evidence library the coach designs from. The coach designs; the engine calculates and checks. You use the plugin by hand every day; the coach does the thinking and makes the plan changes. Everything stays in your vault as plain files, with no account and no server.
 
-This guide covers plugin 0.28.2 and engine 0.28.2. The screenshots come from a practice vault with made-up data, so your numbers will differ. To look around before you install, [try Pahlavan in your browser](https://saeed1262.github.io/pahlavan/demo/): the same screens on a made-up athlete.
+This guide covers plugin 0.29.0 and engine 0.29.0. The screenshots come from a practice vault with made-up data, so your numbers will differ. To look around before you install, [try Pahlavan in your browser](https://saeed1262.github.io/pahlavan/demo/): the same screens on a made-up athlete.
 
 > [!WARNING] Safety
 > Pahlavan is a general fitness tool for adults 18 and over, not medical advice. If you have a health condition, check with a doctor before you start, and stop any exercise that hurts.
@@ -14,6 +14,7 @@ This guide covers plugin 0.28.2 and engine 0.28.2. The screenshots come from a p
 
 - [What you need](#what-you-need)
 - [Get started](#get-started)
+  - [Without Obsidian](#without-obsidian)
 - [Your day](#your-day)
 - [Your Sunday check-in and letter](#your-sunday-check-in-and-letter)
 - [The light week, every four weeks](#the-light-week-every-four-weeks)
@@ -29,24 +30,37 @@ This guide covers plugin 0.28.2 and engine 0.28.2. The screenshots come from a p
 
 - **Obsidian 1.7.2 or later on a desktop computer.** Pahlavan doesn't run on phones yet, but an iPhone can send it what you log (see [Logging from the phone](#logging-from-the-phone)).
 - **A Mac, for every reminder to work.** macOS notifications, stand-ups and sitting time (they read keyboard and mouse activity) and photo conversion (iPhone HEIC to JPEG) use the Mac. On another computer the cards still appear inside Obsidian, but stand-ups and sitting time don't count.
-- **Claude Code, opened in your vault's folder, for the coach.** The coach writes your plan, so without it Pahlavan has no session to show.
-- **Node.js and Python 3** on the computer where you run the coach. Its scripts use both.
-- **The folder Pahlavan reads.** Your fitness files go in a `Fitness/` folder, with the habit check-ins beside them. To keep them somewhere else, set **Files** in Pahlavan's settings (a vault that already holds a plan elsewhere is found on its own). The coach's helper scripts still go in `5-System/Scripts/` for now.
+- **Claude Code, opened in your vault's folder, for the coach.** The coach writes your plan, so without it Pahlavan has no session to show. The coach also works on its own, without Obsidian: see [Without Obsidian](#without-obsidian).
+- **Node.js 18 or later** on the computer where you run the coach: its engine runs on it. Python 3 too if you track water, since the coach works out the water target with a short Python script.
+- **The folder Pahlavan reads.** Your fitness files go in a `Fitness/` folder, with the habit check-ins beside them. To keep them somewhere else, set **Files** in Pahlavan's settings (a vault that already holds a plan elsewhere is found on its own).
 
 ## Get started
 
 ### Install the plugin
 
-Pahlavan isn't in Obsidian's community plugin list yet, so you install it by hand.
+In Obsidian, open **Settings**, **Community plugins**, **Browse**, search for **Pahlavan** and install it. To install it by hand instead:
 
 1. In your vault, create the folder `.obsidian/plugins/pahlavan/`.
 2. Copy the plugin's three files into it: `main.js`, `manifest.json` and `styles.css`. From the project folder, `npm run ship-plugin -- <your vault>/.obsidian/plugins/pahlavan` builds the files and copies them there.
 3. In Obsidian, open **Settings**, then **Community plugins**, and turn on **Pahlavan**. If Obsidian asks, turn on community plugins first.
-4. Click Pahlavan's icon in the left ribbon (two crossed clubs), or run **Pahlavan: Open** from the command palette. Pahlavan opens in a tab on **Home**, the overview; after that it opens on the screen you used last.
+4. Click Pahlavan's icon in the left ribbon (two crossed clubs), or type **Pahlavan** in the command palette and run **Open**. Pahlavan opens in a tab on **Home**, the overview; after that it opens on the screen you used last.
 
-To install the coach, copy the `fitness-coach` skill folder into `.claude/skills/` in your vault. Run `npm run ship-skill -- <the skill folder>` from the project to put the current engine in the skill's `scripts/` folder.
+To install the coach, press **Set up the coach** on the welcome card (it's also in Pahlavan's settings, Coach): it copies the coach into `.claude/skills/fitness-coach/` in your vault.
 
 Until you've done the intake, the screens are mostly empty, and each says what fills it: Plan and Food each have a card with the coach's command to copy. Today shows a **Welcome to Pahlavan** card with your first six steps, starting with **Set up the coach**, and the **?** at the top right opens this guide (see [Help inside Pahlavan](#help-inside-pahlavan)).
+
+### Without Obsidian
+
+The coach works on its own in Claude Code, in a plain folder: no Obsidian and no plugin. You get the whole coach in chat (the intake, your plan and its reasons, logging, a morning check-in, the Sunday check-in and letter, the reviews, an eating plan and daily habits), with the same engine and the same files. You don't get the screens, the charts or the reminder cards, so you start each step yourself.
+
+1. Download `pahlavan-coach-<version>.zip` from the [latest release](https://github.com/saeed1262/pahlavan/releases/latest) and double-click it. You get a `Pahlavan` folder with the coach inside.
+2. Open that folder in Claude Code and type `/fitness-coach intake`.
+
+Then, each with its command: every morning `/fitness-coach today` (today's session, what's due, a short morning check-in), after training `/fitness-coach log`, and on Sundays `/fitness-coach checkin`. Stand-ups and sitting time need Pahlavan (it counts them from your keyboard and mouse), so the coach leaves them out.
+
+To add the screens later, open the same folder as a vault in Obsidian and install Pahlavan: it reads the same files.
+
+[Pahlavan without Obsidian](without-obsidian.md) walks through this route step by step, from installing Node.js and Claude Code to your first week in chat.
 
 ### Run your first intake
 
@@ -190,7 +204,7 @@ Each morning, at the time you chose, the **Morning check-in** card pops up. It t
 
 A muscle you mark sore trims its sets in today's session. For a muscle the quick pick doesn't name, click **Open Check-in** on the card: the Check-in screen has the full body map.
 
-Missed the card? Open the **Check-in** tab, or run **Pahlavan: Open the morning check-in**. The card keeps coming until 21:00.
+Missed the card? Open the **Check-in** tab, or run the command **Open the morning check-in** ([Commands](#commands)). The card keeps coming until 21:00.
 
 The check-in counts as done once you answer energy, soreness or sleep quality. Numbers on their own (sleep hours, resting HR, HRV, weight or steps from your phone) fill their fields, but the card still asks the three questions, and every screen agrees.
 
@@ -247,6 +261,21 @@ Your coach asks once which weights your gym has: the dumbbells from the lightest
 - when the next weight up would be too big a jump for the week, the weight stays too, and the target's **Why** says so.
 
 A kind of kit the coach doesn't know keeps the plan's step, as before. Change gyms? Tell your coach the new weights.
+
+### Log a meal
+
+Send the coach a photo of a meal, or say what you ate, with `/fitness-coach meal`: "chicken and rice, a palm of chicken and a cupped hand of rice", or the photo with "lunch". The coach names each food and its portion, estimates the meal's protein, calories, fiber, fat and carbs, and shows them with your day so far. When the day's protein reaches your target, it ticks Protein for you. Nothing is saved until you say yes.
+
+- **They're estimates.** No food table checks them: the coach reads the photo or your words. Protein from a photo comes close on average; calories can be off by a third or more, mostly from oil and sauces the photo doesn't show. So the coach asks at most one question (the cooking fat, or a portion it can't size), says every number with "about", and records how sure it is. A weight or a label you give wins.
+- **Your photo isn't kept.** The coach looks at it for the estimate and saves only the meal's foods, portions and numbers, in `Coach/meals.json`.
+- **Counting follows your screen.** If your eating plan's screen ruled counting out (any answer but No to the question about a hard time with food), the coach records protein only, in palms, and no calories. At the Light level it leads with protein in palms, then the rest.
+- **Corrections:** "it was two eggs, not three" replaces the meal. "What did I eat today?" or "this week" shows the meals with their totals.
+- **Where it shows:** in chat, in `/fitness-coach today`'s morning summary, in the Sunday check-in's protein question, and on the Food tab's **Meals** card.
+
+**From Obsidian:** **Log a meal** on the Food tab (or **Pahlavan: Log a meal** from the command palette) opens a short form: what you ate in your own words, a photo if you like (drop it or choose it), the day and the time. Pahlavan doesn't estimate anything itself, so it saves the meal as waiting for your coach, in `Coach/Inbox/meals/`. The Meals card lists it under **Waiting for your coach**, with **Remove** if you change your mind. Next time you run `/fitness-coach meal` (or `today`, or the Sunday check-in), the coach estimates each waiting meal, shows them all for one yes, and records them. Then they move up to today's meals, with "about" and how sure the estimate is.
+
+- **The photo waits, then goes.** A photo from the form stays in the vault only until your coach has read it; recording the meal deletes it. An iPhone photo (HEIC) is converted to a JPEG on the Mac.
+- **Not in git.** The folder's `.gitignore` keeps the photos out of your vault's git history. On a vault two Macs share, a photo is only on the Mac that saved it; the coach on the other Mac goes by your words and says so.
 
 ### Tick habits and answer the reminder cards
 
@@ -459,11 +488,11 @@ Until the coach adds your day's times, the meal ideas, the reasons and the tips,
 
 ### Movements
 
-The Movements tab, after Food, holds every movement Pahlavan knows (245), the same list the coach chooses from. Use it to look up how to do a movement, find an easier or harder version, or see what you could do with the equipment you have. It also opens from the command **Pahlavan: Browse movements** and from **Browse movements** in the Plan tab's notes card.
+The Movements tab, after Food, holds every movement Pahlavan knows (245), the same list the coach chooses from. Use it to look up how to do a movement, find an easier or harder version, or see what you could do with the equipment you have. It also opens from the command **Browse movements** and from **Browse movements** in the Plan tab's notes card.
 
 - **Search:** type a name, another name for it, a muscle or a tool, such as "row", "glutes" or "band". The list follows as you type, best matches first. The **×** clears the words.
 - **Filters:** a movement group (rows, squats, mobility and so on), a muscle (a movement counts when it trains it as a main or a helping muscle), a level, and **My equipment**: only what your profile's equipment covers, with a tool that stands in counting (a kettlebell for a dumbbell goblet squat). Without equipment in your profile, **My equipment** is greyed out; the coach records it at the intake. **Clear the search** puts everything back.
-- **Each movement:** its name, its level, what it works, and the tools it needs. **In your plan** marks one your sessions train, and "Needs rings" (or another tool) one your equipment doesn't cover. Click the name for the movement guide: the muscles on a small body map, the setup, the movement, the mistake to avoid, and a link that searches YouTube for a video.
+- **Each movement:** its name, its level, what it works, and the tools it needs. **In your plan** marks one your sessions train, and "Needs rings" (or another tool) one your equipment doesn't cover. Click the name for the movement guide: the muscles on a small body map, the setup, the movement, the mistake to avoid, the grips it can take where the grip changes the path (a pulldown, a row, a press), and a link that searches YouTube for a video.
 - **Easier and harder:** the nearest steps down and up. Click one to clear the filters, find that movement and open its guide.
 - **Ladders:** beside the list (under it in a narrow pane), each ladder's steps from easiest to hardest: your plan's own ladders, with the level you're on, the four the movement self-check starts, and more from the catalogue. A ladder your plan already has shows once, as yours, and a second ladder with the same name is titled by its range, such as "Pull-up: dead hang to weighted pull-up". Click a step to see that movement. With a search, only the ladders with those movements show.
 
@@ -495,7 +524,7 @@ Pahlavan explains itself as you go, in three places.
 
 ![The welcome card: the six first steps, the safety line, and Open the guide, Show me around and Using Pahlavan? Say hi at its foot](user-guide/welcome.png)
 
-- **The ?** at the right of the tab bar has **User guide** (this guide: your vault's copy when there is one, else the published page), **Show the tips again**, **When to talk to the coach** (the list below, in short) and **Your routine**. The command **Pahlavan: Open the user guide** does the same as User guide.
+- **The ?** at the right of the tab bar has **User guide** (this guide: your vault's copy when there is one, else the published page), **Show the tips again**, **When to talk to the coach** (the list below, in short) and **Your routine**. The command **Open the user guide** does the same as User guide.
   - **Your routine** is your own routine on one page: "About five minutes a day in Pahlavan, plus the session." Each row is a time, what to do and where you do it (a card, Today, Log session, Check-in, the Body record or the Plan). **Every day:** the morning check-in at its card's time (energy, soreness, sleep, and the numbers from your watch or phone if you have them, typed in), a look at Today, each thing you track at its card's time (times close together share a row, such as "21:00 to 22:00 Protein, flossing, skin routine"; water, stand-ups, desk breaks and sitting by the days they run; anything without a time under "Any time"), logging after training, and the evening "Did you train?". **Sundays:** the week's questions, then `/fitness-coach checkin` for the letter, and the tape every second Sunday with its next date. **Every four weeks:** the light week (its Sunday's photos, then `/fitness-coach review`), the test week when your plan lists its own (the tests on Saturday, the photos on Sunday) and the phase end (the tests on Saturday, the review on Sunday; only the review when the plan lists its test weeks), each with its next date. It's built from your plan, what you track and your card times each time you open it, so it changes when they do.
 - **The welcome card** sits at the top of Today in your first weeks, with six first steps: set up the coach (its button writes the coach, a Claude Code skill, into the vault, and says if Node is missing), run the intake, get your plan, answer your first morning check-in, log your first session, and do your first Sunday check-in. The steps done in Claude Code show their command with **Copy**. Each one ticks itself when its file appears, so there's nothing to tick by hand. **Hide** (any time) sits at its top; **Open the guide** and **Show me around** (the tips, from the start) at its foot, with **Using Pahlavan? Say hi**: a link to a pinned GitHub issue where a short reply tells me you use it, since Pahlavan counts nothing about you. Once all six are done, it goes.
 - **Six one-time tips** point at the controls you need first: Readiness, Why, Log session and Due today on Today, the Sunday check-in on Check-in, and the This cycle switch on Progress. One shows at a time, beside its element, the first time its screen opens; **Got it** moves to the next, **Skip the tips** ends them. A tip waits while a reminder card or the Log panel is open.
@@ -547,7 +576,7 @@ Stand-ups and sitting time count only real time at the keyboard or mouse. Time a
 
 - **The stand-up card** says how long you've been sitting and asks you to stand for a while. After **I'm standing**, it counts down your standing minutes. You can close it and the count goes on in the status bar. Walk away from the desk if you like: time away during a stand counts as standing, so the stand finishes and counts. **End this stand** stops early.
 - **The status bar** shows the next stand-up ("Stand in 12 min", "Stand up now", "Standing, 18 min left") while a stand-up or sitting item counts today; with Standing now on, the standing minutes until the next stand is logged for you ("Stand logged in 9 min"; nothing asks you to stand).
-- **Standing now** is for a standing desk: while it's on, typing doesn't count as sitting, and standing at the desk counts toward your stand-ups. Each stand's worth of minutes (15 with the usual settings) is logged as a stand, quietly, and the sitting count starts over; less than that when you turn it off is not logged, and the sitting count goes on where it was. These desk minutes count toward your daily target and its linked habit like any stand, and are also kept apart, so Due today shows them ("80 of 120 min standing, 40 of them at the desk") and the coach's reviews can tell them from the stands the card asked for. Turn it on with the switch in Due today's **Sitting today** row, by clicking the status bar, or with **Pahlavan: Standing now (on or off, this Mac)**. It turns itself off at midnight or after half an hour away.
+- **Standing now** is for a standing desk: while it's on, typing doesn't count as sitting, and standing at the desk counts toward your stand-ups. Each stand's worth of minutes (15 with the usual settings) is logged as a stand, quietly, and the sitting count starts over; less than that when you turn it off is not logged, and the sitting count goes on where it was. These desk minutes count toward your daily target and its linked habit like any stand, and are also kept apart, so Due today shows them ("80 of 120 min standing, 40 of them at the desk") and the coach's reviews can tell them from the stands the card asked for. Turn it on with the switch in Due today's **Sitting today** row, by clicking the status bar, or with the command **Standing now (on or off, this Mac)**. It turns itself off at midnight or after half an hour away.
 - **Calls:** Pahlavan doesn't detect calls. A call with no typing for longer than the item's time away counts as time away, not sitting.
 
 ### Two computers
@@ -569,7 +598,7 @@ Open the command palette and type "Pahlavan":
 | Open | Opens the Pahlavan tab |
 | Open the user guide | This guide: your vault's copy when there is one, else the published page |
 | Browse movements | Opens the [Movements](#movements) tab: every movement, to search, with its guide |
-| Write the exercise catalogue | Every movement Pahlavan knows (245), each with its muscles, regions, tools, easier and harder versions, and how to set up, do it and what to avoid, as `Exercise catalogue.md` in your fitness folder; it opens when written. Run it again after an update. The same list is [on the web](exercise-catalogue.md) |
+| Write the exercise catalogue | Every movement Pahlavan knows (245), each with its muscles, regions, tools, easier and harder versions, how to set up, do it and what to avoid, and its grips where the grip changes the path, as `Exercise catalogue.md` in your fitness folder; it opens when written. Run it again after an update. The same list is [on the web](exercise-catalogue.md) |
 | Open check-in | The morning card until today's is saved, then the Check-in screen |
 | Open the morning check-in | The morning check-in card |
 | Add progress photos | The photo card |
@@ -637,12 +666,15 @@ The coach is the `fitness-coach` skill in Claude Code. Start Claude Code in your
 |---|---|---|
 | `intake` | The first time, or for a fresh start | `/fitness-coach intake`, "reset my training" |
 | `plan` | After the intake, and whenever the plan should change: travel, soreness, a short day, an injury, missed weeks, the next month, or a new plan in place of yours; also for the reasons on the Plan screen's **Why this plan** card | `/fitness-coach plan`, `/fitness-coach plan why`, "this plan has gone stale, I want a new one", "I'm travelling next week, hotel gym only", "my knee hurts on lunges", "only 20 minutes today", "swap the leg press" |
-| `log` | To log from your own words or a pasted workout sheet, set a ladder level, or fix a top set | "did A today, squat 65×5, bench 30×8", "I'm on push-up level 3 now", "Tuesday's bench was 60 × 8, not 80 × 8" |
+| `today` | In the morning, for today's session, what's due and a short check-in (the way to start the day without Obsidian) | `/fitness-coach today`, "good morning", "what's today?" |
+| `log` | To log from your own words or a pasted workout sheet, set a ladder level, fix a top set, or change or delete a logged session | "did A today, squat 65×5, bench 30×8", "I'm on push-up level 3 now", "Tuesday's bench was 60 × 8, not 80 × 8", "delete yesterday's run, I logged it twice" |
 | `checkin` | Every Sunday, after saving your answers in Pahlavan; mid-week for next week's targets | `/fitness-coach checkin`, "what should I lift next week?" |
 | `review` | The check-in that ends a light week, and the phase reviews | `/fitness-coach review`, "phase review" |
 | `progress` | After new photos, or for a dated progress report | `/fitness-coach progress`, "check my progress" |
 | `diet` | For an eating plan, or questions about protein | `/fitness-coach diet`, "what should I eat?" |
-| `ask` | For questions about your own data | "am I on pace for my waist target?", "why is my bench down?" |
+| `meal` | To log a meal from a photo or your words: the coach estimates protein, calories, fiber, fat and carbs, and ticks Protein when the day reaches your target ([Log a meal](#log-a-meal)) | `/fitness-coach meal` with a photo, "I had two eggs and toast", "what did I eat today?" |
+| `habits` | For the small daily things the coach tracks with you: a supplement such as creatine, water, stand-ups, sitting time, desk breaks, or your own; to add one, change it, pause it or stop it | `/fitness-coach habits`, "track creatine", "pause water for a week", "stop tracking stand-ups" |
+| `ask` | For questions about your own data | `/fitness-coach ask`, "am I on pace for my waist target?", "why is my bench down?" |
 
 ### When to talk to the coach
 
@@ -785,7 +817,7 @@ They're still there. After a fresh start, every screen counts from the new cycle
 
 ### No cards appear
 
-Check, in order: **Reminders** and **Remind on this Mac** in Settings; quiet hours; that you've used the keyboard or mouse in the last few minutes; and that no other card is open. **Pahlavan: Open the reminder queue (what is due now)** shows what's due right now. Each item's own reminder is in its form in Progress, Habits.
+Check, in order: **Reminders** and **Remind on this Mac** in Settings; quiet hours; that you've used the keyboard or mouse in the last few minutes; and that no other card is open. The command **Open the reminder queue (what is due now)** shows what's due right now. Each item's own reminder is in its form in Progress, Habits.
 
 ### Stand-ups say "Needs keyboard and mouse activity, not available on this computer"
 

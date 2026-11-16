@@ -2152,6 +2152,41 @@ body.isfahan.isfahan-night .pahlavan-view { --pv-seq-1: #0b5953; --pv-seq-2: #2b
 .pahlavan-view .pv-fd-chk.is-on .pv-fd-chk-box { background: var(--pv-line); border-color: var(--pv-line); color: var(--pv-card); }
 .pahlavan-view .pv-fd-opt-foot { margin-top: 8px; color: var(--text-faint); font-size: 11.5px; line-height: 1.4; }
 
+/* 3b. Meals: today's meals as the coach estimated them, and the ones waiting for it */
+.pahlavan-view .pv-fd-meals .pv-card-title { margin-top: 4px; }
+.pahlavan-view .pv-fd-meals .pv-card-sub { margin-top: 2px; }
+.pahlavan-view .pv-fd-meal-list { margin-top: 10px; }
+.pahlavan-view .pv-fd-meal { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--pv-card-line); }
+.pahlavan-view .pv-fd-meal-at { padding-top: 1px; }
+.pahlavan-view .pv-fd-meal-list .pv-fd-meal:first-child { border-top: none; }
+.pahlavan-view .pv-fd-meal-at { color: var(--text-muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pahlavan-view .pv-fd-meal-at svg { width: 16px; height: 16px; color: var(--text-faint); }
+.pahlavan-view .pv-fd-meal-t { min-width: 0; }
+.pahlavan-view .pv-fd-meal-t b { display: block; font-size: 13px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.pahlavan-view .pv-fd-meal-t small { display: block; margin-top: 1px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.pahlavan-view .pv-fd-meal .pv-btn-quiet { height: 28px; padding: 0 10px; font-size: 12px; }
+.pahlavan-view .pv-fd-meal-sum { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--pv-card-line); color: var(--text-muted); font-size: 12.5px; line-height: 1.45; }
+.pahlavan-view .pv-fd-meal-sum b { color: var(--text-normal); font-weight: 650; }
+.pahlavan-view .pv-fd-meal-wait { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--pv-card-line); }
+.pahlavan-view .pv-fd-meal-wait .pv-fd-meal:nth-child(2) { border-top: none; }
+.pahlavan-view .pv-fd-meal-cmd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 8px; color: var(--text-faint); font-size: 11.5px; line-height: 1.45; }
+.pahlavan-view .pv-fd-meal-cmd .pv-btn-quiet { height: 26px; padding: 0 9px; font-size: 11.5px; }
+.pahlavan-view .pv-fd-meal-cmd .pv-btn-quiet svg { width: 12px; height: 12px; }
+.pahlavan-view .pv-fd-meals > .pv-faint { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; }
+.pahlavan-view .pv-fd-meal-log { margin-top: 14px; }
+.pahlavan-view .pv-fd-wide .pv-fd-meals { margin-top: 18px; }
+
+/* The meal form (Log a meal): a card's look, a text box and one photo */
+.pahlavan-view.is-meal .pv-meal-text textarea { width: 100%; min-height: 84px; resize: vertical; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-normal); font: inherit; font-size: 13.5px; line-height: 1.45; }
+.pahlavan-view.is-meal .pv-meal-text textarea::placeholder { color: var(--text-faint); }
+.pahlavan-view.is-meal .pv-meal-text.is-bad textarea { border-color: var(--pv-over); }
+.pahlavan-view.is-meal .pv-meal-photo { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; margin: 14px 0; }
+.pahlavan-view.is-meal .pv-meal-photo .pv-nv-pose-box { aspect-ratio: 1 / 1; }
+.pahlavan-view.is-meal .pv-meal-photo .pv-nv-pose-box.is-bad { border-color: var(--pv-over); }
+.pahlavan-view.is-meal .pv-meal-photo-t { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; font-size: 12.5px; }
+.pahlavan-view.is-meal .pv-meal-photo-t small { color: var(--text-faint); font-size: 11.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.pahlavan-view.is-meal .pv-meal-photo-t .pv-btn-quiet { height: 28px; padding: 0 10px; font-size: 12px; }
+
 /* 4. Coach's tips */
 .pahlavan-view .pv-fd-tips { list-style: none; margin: 10px 0 0; padding: 0; }
 .pahlavan-view .pv-fd-tip { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--pv-card-line); }

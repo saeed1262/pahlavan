@@ -31,7 +31,8 @@ export type BodyPartName = (typeof BODY_PARTS)[number];
 
 export interface BodyInput {
   date: IsoDate;
-  morning?: MorningValues;
+  /** The morning fields, and "I'm ill today" (`illness`: true sets it, false takes it off), as the morning check-in saves them. */
+  morning?: MorningValues & { illness?: boolean };
   tape?: RecordValues;
   tests?: RecordValues;
 }
@@ -65,7 +66,7 @@ export interface BodyPlan {
   /** The file to write; null when nothing changes or something stops the write. */
   text: string | null;
   /** The date's morning fields, tape and tests once written (as the file would hold them). */
-  after: { morning: Record<MorningKey, number | null>; tape: Record<string, RecordValue>; tests: Record<string, RecordValue> };
+  after: { morning: Record<MorningKey, number | null>; illness: boolean; tape: Record<string, RecordValue>; tests: Record<string, RecordValue> };
 }
 
 type Obj = Record<string, unknown>;
@@ -94,9 +95,10 @@ export function readBodyInput(raw: unknown, today: IsoDate): { input: BodyInput 
       errors.push({ code: 'record', message: `"${p}" must be an object of its fields` });
       continue;
     }
-    const known = p === 'morning' ? (MORNING_KEYS as readonly string[]) : FIELDS[p].map((f) => f.id);
+    const known = p === 'morning' ? [...MORNING_KEYS, 'illness'] : FIELDS[p].map((f) => f.id);
     const bad = Object.keys(v).filter((k) => !known.includes(k));
     if (bad.length) errors.push({ code: 'record', message: `"${p}" has unknown fields: ${bad.join(', ')} (known: ${known.join(', ')})` });
+    if (p === 'morning' && v['illness'] !== undefined && typeof v['illness'] !== 'boolean') errors.push({ code: 'record', message: '"morning.illness" is true (ill that day: no hard training) or false (takes it off)' });
     if (!Object.keys(v).length) errors.push({ code: 'record', message: `"${p}" is empty` });
   }
   if (errors.length) return { input: null, errors };
@@ -128,12 +130,13 @@ export function planBody(text: string | null, input: BodyInput, opts: { replace?
   const { date } = input;
 
   if (input.morning) {
-    const values = input.morning;
+    const { illness, ...values } = input.morning;
     // The record expects each field empty: what is there already is the baseline only when it matches.
     const disk = morningFrom(doc ?? null, date).values;
     const keys = MORNING_KEYS.filter((k) => values[k] !== undefined);
     const conflicts: BodyConflict[] = keys.filter((k) => disk[k] !== null && disk[k] !== (values[k] ?? null)).map((k) => ({ field: k, disk: disk[k], mine: values[k] ?? null }));
-    const m = mergeMorning(cur, date, { values, baseline: {}, force });
+    // "I'm ill today" is a yes or a no on the day, never a conflict: the morning check-in's own merge sets or clears it.
+    const m = mergeMorning(cur, date, { values, baseline: {}, force, ...(illness !== undefined ? { illness } : {}) });
     if (m.result === 'invalid') errors.push(...m.errors.map((e) => ({ code: 'invalid', message: `morning: ${e}` })));
     else if (m.result === 'unreadable') errors.push({ code: 'body', message: m.error });
     else if (m.result === 'conflict') results.push({ part: 'morning', result: 'conflict', changed: [], conflicts, note: conflictNote('morning', date, conflicts) });
@@ -141,12 +144,13 @@ export function planBody(text: string | null, input: BodyInput, opts: { replace?
     else {
       cur = m.text;
       const yesterday = m.changed.filter((k) => YESTERDAY_KEYS.includes(k));
+      const ill = m.illness ? (illness ? `ill on ${date} (no hard training that day)` : `illness taken off ${date}`) : '';
       results.push({
         part: 'morning',
         result: 'set',
-        changed: m.changed,
+        changed: [...m.changed, ...(m.illness ? ['illness'] : [])],
         conflicts: force ? conflicts : [],
-        note: `${m.changed.join(', ')} on ${date}${yesterday.length ? ` (${yesterday.join(' and ')} on ${addDays(date, -1)}, the day they count for, as the morning check-in files them)` : ''}${force && conflicts.length ? `; replaced ${conflicts.map((c) => `${c.field} ${show(c.disk)}`).join(', ')}` : ''}.`,
+        note: `${[m.changed.length ? `${m.changed.join(', ')} on ${date}${yesterday.length ? ` (${yesterday.join(' and ')} on ${addDays(date, -1)}, the day they count for, as the morning check-in files them)` : ''}` : '', ill].filter(Boolean).join('; ')}${force && conflicts.length ? `; replaced ${conflicts.map((c) => `${c.field} ${show(c.disk)}`).join(', ')}` : ''}.`,
       });
     }
   }
@@ -184,7 +188,7 @@ export function planBody(text: string | null, input: BodyInput, opts: { replace?
     errors,
     warnings,
     text: blocked || !changed ? null : cur,
-    after: { morning: morningFrom(shown, date).values, tape: recordFrom(shown, 'tape', date), tests: recordFrom(shown, 'tests', date) },
+    after: { morning: morningFrom(shown, date).values, illness: morningFrom(shown, date).illness, tape: recordFrom(shown, 'tape', date), tests: recordFrom(shown, 'tests', date) },
   };
 }
 
@@ -204,8 +208,9 @@ export function bodyLanded(back: string | null, input: BodyInput, plan: BodyPlan
   for (const r of plan.results) {
     if (r.result !== 'set') continue;
     if (r.part === 'morning') {
-      const now = morningFrom(doc, input.date).values;
-      if (!r.changed.every((k) => now[k as MorningKey] === (input.morning?.[k as MorningKey] ?? null))) return false;
+      const now = morningFrom(doc, input.date);
+      if (!r.changed.filter((k) => k !== 'illness').every((k) => now.values[k as MorningKey] === (input.morning?.[k as MorningKey] ?? null))) return false;
+      if (r.changed.includes('illness') && now.illness !== (input.morning?.illness === true)) return false;
     } else {
       const now = recordFrom(doc, r.part, input.date);
       const given: RecordValues = (r.part === 'tape' ? input.tape : input.tests) ?? {};

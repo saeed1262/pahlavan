@@ -585,6 +585,25 @@ only).
 - **Posture goal:** pulling sets at least equal to pushing sets **(H)**, with
   face pulls, rear-delt work or pull-aparts in every session; with a
   confirmed posture finding, about twice (`check`'s `pull-push`).
+- **Repeats take a different path** (**Weak**, `rules.md`, "Path
+  variety"): two movements on the same path in one session (the same
+  pattern, regions and grip: pull-ups and a lat pulldown, both overhand),
+  and one accessory on two days of the week, each get another grip, angle
+  or tool, kept for the block like any planned variation, never rotated
+  session to session. `catalogue` lists each movement's `grips` (the one
+  its guide describes, and the others, each with its setup line). A grip
+  goes in the item's name in parentheses ("Lat Pulldown (close neutral
+  grip)"): the catalogue's muscles still count, the name starts its own
+  history, and the grip's setup line goes in the item's guide entry. Main
+  lifts keep their grip for the phase; a logged lift takes a new grip only
+  where a change may happen (a mesocycle boundary, a phase for a main
+  lift), since the new name starts a fresh history and finds its load
+  again. `check` notes each repeat (`same-path-twice`,
+  `movement-twice-a-week`, both information): answer each with another
+  grip, angle or tool, or keep it with an override whose reason is the
+  item's (a small muscle trained twice, a movement the person likes). The
+  item's "Why:" says variety and a different path, never that a grip grows
+  a muscle more: no study shows it does.
 - **A new movement** needs a `guide` entry with `muscles: {main, helps}` (and
   `regions` for a movement outside the catalogue that biases one) and, if
   it's a logged lift, a `lifts` entry (`plan-files.md`, step 2). For a
@@ -1048,7 +1067,10 @@ On the yes, through `plan-files.md`, in its order:
      that name (`Flat DB Bench Press`, not the catalogue's `Flat dumbbell
      bench press`), with its existing `guide` entry, its `lifts` entry and
      the name the log holds. Never rename a logged lift: its history (e1RM,
-     stalls, Pahlavan's Last) is matched by name. A redesign
+     stalls, Pahlavan's Last) is matched by name. A grip in parentheses is a
+     new name on purpose ("Lat Pulldown (close neutral grip)"): it starts its
+     own history, so it comes only where a change may (section 4, "Repeats
+     take a different path"). A redesign
      sets this aside except for what Reconcile keeps (step 1.7): a logged
      lift it keeps keeps its logged name, so its history still matches;
      every other movement has the name the coach gives it.

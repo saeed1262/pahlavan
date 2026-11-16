@@ -44,6 +44,7 @@ describe('the layout', () => {
       'Fitness/Coach/profile.json', 'Fitness/Coach/tracking.json', 'Fitness/Coach/Inbox', 'Fitness/Coach/Letters', 'Fitness/Coach/Decisions.md', 'Fitness/Coach/help.json', 'Fitness/Progress Photos', 'Fitness/Pahlavan guide.md',
     ]);
     assert.equal(l.workTimer, null);
+    assert.deepEqual([l.meals, l.pendingMeals], ['Fitness/Coach/meals.json', 'Fitness/Coach/Inbox/meals'], 'the waiting meals in a subfolder of the inbox, which neither importer reads');
   });
 
   it('a folder anywhere, the two files elsewhere; slashes at either end are dropped', () => {

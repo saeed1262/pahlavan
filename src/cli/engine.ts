@@ -4,11 +4,13 @@
 // log add's habit ticks) habits-data.json, Coach/eating-plan.json and (log,
 // and the phone's inbox) fitness-log-data.json; for the inbox also
 // Coach/nudges.json, and inside Coach/Inbox/ its refused.json and phone.json
-// and the moves to applied/; for plan-write, plan-data.json.
+// and the moves to applied/; for plan-write, plan-data.json; for meal add
+// --pending and meal discard, a waiting meal's files in Coach/Inbox/meals/.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { INBOX_FILES, isEntryFile } from '../report/inbox.ts';
+import { PENDING_MEAL_FILE, PENDING_MEAL_PHOTO } from '../core/validate.ts';
 import { run, type CliIo, type CliResult } from './cli.ts';
 import { paths } from '../adapters/vault/layout.ts';
 
@@ -44,6 +46,15 @@ const io: CliIo = {
   },
   writeEating(root, text) {
     writeAtomic(join(root, paths().eating), text);
+  },
+  writeMeals(root, text) {
+    writeAtomic(join(root, paths().meals), text);
+  },
+  removePending(root, file) {
+    // Only a waiting meal's own entry or photo, by its name, inside Coach/Inbox/meals/; one already gone is fine.
+    if (file.includes('/') || (!PENDING_MEAL_FILE.test(file) && !PENDING_MEAL_PHOTO.test(file))) throw new Error(`not a waiting meal's file: ${file}`);
+    const p = join(root, paths().pendingMeals, file);
+    if (existsSync(p)) unlinkSync(p);
   },
   writeHabits(root, text) {
     // The habit check-ins: an existing file merged, or a vault's first one (the merges start it with Workout and Protein).

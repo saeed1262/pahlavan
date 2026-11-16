@@ -251,7 +251,7 @@ describe('cli: track', () => {
     const fixed = cli(['track', 'body-record', '--vault', 'v', '--schedule', 'fixed', '--tape-from', '2026-03-10', '--tape-every', '14', '--tests-from', '2026-03-07', '--tests-every', '28']);
     assert.deepEqual(fixed.out.after.bodyRecord, { schedule: 'fixed', tapeFrom: '2026-03-10', tapeEvery: 14, testsFrom: '2026-03-07', testsEvery: 28 });
     for (const [argv, re] of [
-      [['track'], /track takes one of: suggest, add, decline, accept, dismiss, morning, body-record, fresh, protein, apply/],
+      [['track'], /track takes one of: suggest, add, decline, accept, dismiss, pause, resume, remove, morning, body-record, fresh, protein, apply/],
       [['track', 'morning', '--vault', 'v'], /needs --at HH:MM or --off/],
       [['track', 'accept', '--vault', 'v', '--at', '07:00'], /track accept does not take --at/],
       [['track', 'body-record', '--vault', 'v', '--schedule', 'fixed', '--tape-from', '2026-03-10'], /needs --tape-every, --tests-from, --tests-every/],

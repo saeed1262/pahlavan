@@ -12,7 +12,8 @@
 
 import { normalizeEquipment } from '../../core/plan/context.ts';
 import { calibrateSlot, calibrateTimedSlot } from '../../core/calibration.ts';
-import { CATALOGUE_BY_ID } from '../../core/data/exercises.ts';
+import { CATALOGUE_BY_ID, GRIPS } from '../../core/data/exercises.ts';
+import { gripOf } from './catalogue-match.ts';
 import { MUSCLE_IDS, MUSCLES } from '../../core/data/muscles.ts';
 import { parentMissingText, REGION_IDS, regionProblems } from '../../core/data/regions.ts';
 import { newestBaseline } from '../../core/cycle.ts';
@@ -768,6 +769,12 @@ export function fromVault(files: VaultFiles, opts: VaultOptions = {}): VaultData
     if (match) {
       catalogueMatch[id] = match.id;
       ex.pattern = match.pattern;
+      // The grip its name gives (in parentheses), for a movement whose grip changes its path; the name keeps its own history.
+      const g = gripOf(name, match);
+      if (g.grip) ex._grip = g.grip;
+      if (g.unknown) {
+        notes.group('grip-unknown', 'Exercises whose name gives a grip the catalogue movement does not list: its own grip is read. Name one of its grips in parentheses, for example "Lat Pulldown (close neutral grip)"; `engine catalogue` lists each movement\'s grips.', `${name}: "${g.unknown}" (${[match.grips!.default, ...match.grips!.options.map((o) => o.grip)].map((x) => GRIPS[x].label).join(', ')})`);
+      }
       ex.risk = [`abdomen-${match.iap}`];
       ex.equipment = match.equipment[0]!;
     }

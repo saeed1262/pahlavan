@@ -16,6 +16,7 @@ import { buildFood } from '../../src/report/food.ts';
 import { applyFoodState, type FoodPlan, type FoodState } from '../../test/fixtures/food/food-state.ts';
 import { fixtureFiles, memoryIo } from '../../test/helpers.ts';
 import { renderFood, type FoodContext } from '../src/ui/food.ts';
+import type { MealsCard } from '../../src/report/meals-card.ts';
 import { FakeElement, installFakeDom, text } from './fake-dom.ts';
 
 installFakeDom();
@@ -209,5 +210,64 @@ describe('the Food tab', () => {
     assert.equal(root.querySelectorAll('[data-sec]').length, 0);
     click(root.querySelector('[data-k="fd-copy"]'));
     assert.deepEqual(calls, ['copy']);
+  });
+});
+
+// ---------------------------------------------------------------- the Meals card
+
+const MEALS: MealsCard = {
+  date: '2026-11-02',
+  counting: 'allowed',
+  meals: [
+    { id: '2026-11-02-0740', at: '07:40', name: 'Breakfast: yogurt, oats and berries', proteinG: 34, kcal: 520, confidence: 'medium' },
+    { id: '2026-11-02-1310', at: '13:10', name: 'Lunch: chicken and rice', proteinG: 48, kcal: null, confidence: 'low' },
+  ],
+  totals: { date: '2026-11-02', meals: 2, proteinG: 82, kcal: 520, fiberG: null, fatG: null, carbsG: null, partial: ['kcal'] },
+  goalG: 134,
+  waiting: [{ id: '2026-11-02T16-05-00', date: '2026-11-02', at: '16:00', text: 'A protein shake with milk and a banana', photo: true, photoFound: false }],
+  problems: [],
+};
+
+describe('the Food tab\'s Meals card', () => {
+  const extra = (over: Partial<FoodContext> = {}): Partial<FoodContext> => ({ meals: MEALS, onLogMeal: () => {}, onRemoveMeal: () => {}, onCopyMeal: () => {}, ...over });
+
+  it('comes after Today, and under the empty state too', () => {
+    const { root } = draw('early', extra());
+    assert.deepEqual(root.querySelector('.pv-fd-side')!.children.map((c) => c.getAttribute('data-sec')), ['today', 'meals', 'tips', 'going']);
+    const empty = draw('empty', extra()).root;
+    assert.ok(empty.querySelector('.pv-fd-wide [data-sec="meals"]'), 'no eating plan: the card still shows');
+  });
+
+  it('today\'s meals with "about", the confidence in words, and the day against the goal', () => {
+    const card = sec(draw('early', extra()).root, 'meals');
+    assert.deepEqual(card.querySelectorAll('.pv-fd-meal-list .pv-fd-meal-t small').map(text), ['about 34 g protein · about 520 kcal · a fair estimate', 'about 48 g protein · a rough guess']);
+    assert.equal(text(card.querySelector('.pv-fd-meal-sum')!), 'So far today: about 82 g protein of your 134 g · about 520 kcal (calories from 1 of 2 meals)');
+  });
+
+  it('a waiting meal: its words, a photo on the other Mac said, Remove and the command', () => {
+    const calls: string[] = [];
+    const { root } = draw('early', extra({ onRemoveMeal: (id) => void calls.push(`rm:${id}`), onCopyMeal: () => void calls.push('copy-meal'), onLogMeal: () => void calls.push('log') }));
+    const card = sec(root, 'meals');
+    const w = card.querySelector('[data-wait="2026-11-02T16-05-00"]')!;
+    assert.equal(text(w.querySelector('b')!), 'A protein shake with milk and a banana');
+    assert.match(text(w.querySelector('small')!), /16:00 · the photo is on the other Mac/);
+    click(card.querySelector('[data-k="fd-meal-rm-2026-11-02T16-05-00"]'));
+    click(card.querySelector('[data-k="fd-meal-copy"]'));
+    click(card.querySelector('[data-k="fd-meal-log"]'));
+    assert.deepEqual(calls, ['rm:2026-11-02T16-05-00', 'copy-meal', 'log']);
+  });
+
+  it('counting ruled out: the meals named, no numbers', () => {
+    const card = sec(draw('early', extra({ meals: { ...MEALS, counting: 'none' } })).root, 'meals');
+    assert.equal(card.querySelectorAll('.pv-fd-meal-list small').length, 0);
+    assert.equal(card.querySelector('.pv-fd-meal-sum'), null);
+    assert.doesNotMatch(text(card), /\d+ g|kcal/);
+  });
+
+  it('nothing yet: a line and the button; read only: no buttons', () => {
+    const card = sec(draw('early', extra({ meals: { ...MEALS, meals: [], totals: null, waiting: [] } })).root, 'meals');
+    assert.match(text(card), /No meals logged today/);
+    const ro = sec(draw('early', { meals: MEALS }).root, 'meals');
+    assert.equal(ro.querySelectorAll('button').length, 0);
   });
 });

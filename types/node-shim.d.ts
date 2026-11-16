@@ -37,6 +37,7 @@ declare module 'node:fs' {
   export function rmSync(path: string, options?: { recursive?: boolean; force?: boolean }): void;
   export function mkdirSync(path: string, options?: { recursive?: boolean }): void;
   export function renameSync(from: string, to: string): void;
+  export function unlinkSync(path: string): void;
   export function cpSync(from: string, to: string, options?: { recursive?: boolean }): void;
 }
 

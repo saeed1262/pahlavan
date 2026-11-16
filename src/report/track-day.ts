@@ -111,6 +111,7 @@ export function buildTrackDay(data: VaultData, tr: TrackingRead, date: IsoDate) 
   const mark = day['mark'] === 'rest' || day['mark'] === 'missed' ? (day['mark']) : null;
   const checked = checkedIn(tr.body, date);
   const morningEntry = entry('morning');
+  const morningDone = isMorningDone(day) || morningEntry?.how === 'done';
   const morning = tr.tracking?.morning ?? null;
   const daily = data.checkins.daily.find((c) => c.date === date);
   const trainingNote = sessions.length
@@ -146,14 +147,15 @@ export function buildTrackDay(data: VaultData, tr: TrackingRead, date: IsoDate) 
       {
         on: Boolean(morning?.on),
         at: morning?.at ?? null,
-        done: isMorningDone(day) || morningEntry?.how === 'done',
+        done: morningDone,
         checkedAt: checked,
         answer: morningEntry?.how ?? null,
         filled: daily !== undefined && (['energy', 'soreness', 'sleepQ', 'sleepH', 'rhr', 'hrv'] as const).some((k) => typeof daily[k] === 'number'),
       },
       'tracking.day-morning',
       { date, checkedAt: checked, answer: morningEntry?.how ?? null },
-      { note: checked ? `Checked in at ${checked}.` : morningEntry?.how ? `The morning card was answered ${morningEntry.how}.` : 'No morning check-in that day.' },
+      // Answered without a check-in time (the coach's body write, the phone's entry): the questions count, as isMorningDone reads them.
+      { note: checked ? `Checked in at ${checked}.` : morningEntry?.how ? `The morning card was answered ${morningEntry.how}.` : morningDone ? 'The morning questions were answered (energy, soreness or sleep quality).' : 'No morning check-in that day.' },
     ),
   };
 }

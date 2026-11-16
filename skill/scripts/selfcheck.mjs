@@ -419,6 +419,10 @@ async function vaultContext() {
   // log fix's target: the newest logged session with a logged lift (fixed to its own values, so a dry run changes nothing).
   const sessions = readJson(join(FITNESS, 'fitness-log-data.json'))?.sessions ?? [];
   const fix = [...sessions].reverse().find((x) => x?.lift1 && typeof x.lift1 === 'object') ?? null;
+  // log show, edit and delete's target, read or changed in a dry run only: the newest session of a type the plan still
+  // has, else a custom one (with no plan yet, only a custom session can be edited, as only one can be logged).
+  const newest = (ok) => [...sessions].reverse().find((x) => x && typeof x.date === 'string' && ok(x.type)) ?? null;
+  const logged = (FRESH ? null : newest((t) => types.includes(t))) ?? newest((t) => t === 'custom');
   const dayItems = (day.json?.items ?? []).map((i) => i.value ?? i);
   // energy needs the profile's birth year and height, and a trend weight (tracked's protein has no grams without one).
   const basics = readJson(join(VAULT, LAYOUT.profile))?.basics ?? {};
@@ -433,11 +437,15 @@ async function vaultContext() {
     itemOfKind: (k) => items.find((i) => i.kind === k)?.id ?? null,
     suggestions: (tracked.json?.suggestions ?? []).map((s) => s.id ?? s.value?.id).filter(Boolean),
     morningAt: tracked.json?.morning?.at ?? '07:30',
+    // A folder without Pahlavan sets no morning time (no card shows) and may track no protein item: their documented exit 1s.
+    morningSet: Boolean(tracked.json?.morning),
+    proteinItem: items.some((i) => i.kind === 'tick' && (i.id === 'protein' || /^protein\b/i.test(String(i.name ?? '').trim()) || i.habit === 'protein')),
     tickDone: dayItems.filter((i) => i.tickable === 'done').map((i) => i.id),
     tickAmount: dayItems.filter((i) => i.tickable === 'amount').map((i) => i.id),
     files: {},
     ladder: (plan.ladders ?? [])[0]?.id ?? null,
     fix,
+    logged,
     energyMissing: noBasics
       ? { code: 1, error: 'no-basics', why: 'the profile has no birth year or height' }
       : noWeight
@@ -462,6 +470,8 @@ async function vaultContext() {
   ctx.files.record = write('record.json', { date: TODAY, morning: { weight } });
   // A custom session: always valid, and a dry run never writes it.
   ctx.files.session = write('session.json', { date: TODAY, type: 'custom', label: 'Selfcheck probe', durationMin: 1 });
+  // An edit that gives the session its own notes again: a dry run that changes nothing.
+  ctx.files.edit = logged ? write('edit.json', { notes: logged.notes ?? '' }) : null;
   // The vault's own eating plan (merged or replaced, unchanged), else the formats.md example.
   const eating = readJson(join(COACH, 'eating-plan.json')) ?? exampleOfKind('eating');
   ctx.files.plan = eating ? write('plan.json', eating) : null;
@@ -472,6 +482,13 @@ async function vaultContext() {
     from: 'selfcheck',
   });
   ctx.files.changes = write('changes.json', { morning: { at: ctx.morningAt }, bodyRecord: { schedule: 'plan' } });
+  // A meal with protein only (valid where counting is ruled out too): a dry run never writes it.
+  ctx.files.meal = write('meal.json', { date: TODAY, name: 'Selfcheck probe', items: [{ food: 'a probe', portion: 'none' }], estimate: { proteinG: 0 }, confidence: 'low', from: 'text', note: 'A probe from the skill self-check: a dry run, never written.' });
+  // The newest meal the file holds, for meal delete's dry run; none: the documented exit 1.
+  ctx.mealId = (readJson(join(COACH, 'meals.json'))?.meals ?? []).at(-1)?.id ?? null;
+  // The oldest meal waiting from Pahlavan's form, for meal add --pending's and meal discard's dry runs; none: the documented exit 1.
+  const waitingDir = join(VAULT, LAYOUT.pendingMeals ?? `${LAYOUT.coach}/Inbox/meals`);
+  ctx.pendingId = existsSync(waitingDir) ? (readdirSync(waitingDir).map((f) => /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d+)?)-meal\.json$/.exec(f)?.[1]).filter(Boolean).sort()[0] ?? null) : null;
   // The vault's own plan as a draft (check --plan, review --plan, plan-write): unchanged, so plan-write finds nothing to write.
   // A fresh vault's draft is the made-up sample plan shipped beside this script.
   if (!FRESH) ctx.files.draft = readJson(join(VAULT, LAYOUT.plan)) ? write('draft.json', plan) : null; // an unreadable plan-data.json has no draft to stand for it
@@ -553,6 +570,15 @@ function fill(pair, where, ctx) {
     if (flag === '--weight') return [[flag, String(li.weight ?? 0)]];
     if (flag === '--reps') return [[flag, String(li.reps ?? 0)]];
   }
+  if (where.key === 'log show' || where.key === 'log edit' || where.key === 'log delete') {
+    const t = ctx.logged;
+    if (!t) throw new Skip('no logged session to read');
+    // A custom session is named by its label: the form without --label gives the documented exit 1.
+    if (t.label && !where.flags.has('--label')) where.expect = { code: 1, error: 'missing', why: 'a custom session is named by its --label' };
+    if (flag === '--date') return [[flag, t.date]];
+    if (flag === '--type') return [[flag, t.type]];
+    if (flag === '--label') return t.label ? [[flag, t.label]] : [[]];
+  }
   if (where.key === 'log ladder' && flag === '--id') {
     if (!ctx.ladder) throw new Skip('plan-data.json has no ladder');
     return [[flag, ctx.ladder]];
@@ -569,6 +595,11 @@ function fill(pair, where, ctx) {
     case '--tape-from':
     case '--tests-from':
       return [[flag, /sunday/i.test(value) ? LAST_SUNDAY : /monday/i.test(value) ? NEXT_MONDAY : TODAY]];
+    // A week of meals, ending today.
+    case '--from':
+      return [[flag, dayOffset(-6)]];
+    case '--to':
+      return [[flag, TODAY]];
     case '--tape-every':
     case '--tests-every':
       return [[flag, '14']];
@@ -595,6 +626,18 @@ function fill(pair, where, ctx) {
         if (!ids.length) throw new Skip(`no ${where.flags.has('--amount') ? 'amount' : 'tick'} item open today`);
         return [[flag, (/\[,/.test(value) ? ids.slice(0, 2) : ids.slice(0, 1)).join(',')]];
       }
+      // Pause, resume and remove a tracked item: a dry run on the first one (resume on an item not paused is unchanged).
+      if (where.sub === 'pause' || where.sub === 'resume' || where.sub === 'remove') {
+        if (!ctx.items.length) throw new Skip('nothing is tracked');
+        return [[flag, (/\[,/.test(value) ? ctx.items.slice(0, 2) : ctx.items.slice(0, 1)).join(',')]];
+      }
+      if (where.key === 'meal delete') {
+        if (!ctx.mealId) {
+          where.expect = { code: 1, error: 'not-found', why: 'no meal recorded yet, so the documented exit 1 for an unknown id' };
+          return [[flag, 'selfcheck-no-such-meal']];
+        }
+        return [[flag, ctx.mealId]];
+      }
       if (where.sub === 'accept' || where.sub === 'dismiss') {
         // No open suggestion: the documented exit 1 for an unknown suggestion id.
         if (!ctx.suggestions.length) {
@@ -604,6 +647,13 @@ function fill(pair, where, ctx) {
         return [[flag, ctx.suggestions[0]]];
       }
       break;
+    }
+    case '--pending': {
+      if (!ctx.pendingId) {
+        where.expect = { code: 1, error: 'not-found', why: 'no meal waiting from Pahlavan\'s form, so the documented exit 1 for an unknown id' };
+        return [[flag, '2000-01-01T00-00-00']];
+      }
+      return [[flag, ctx.pendingId]];
     }
     case '--plan': {
       if (!ctx.files.draft) throw new Skip(FRESH ? `${FRESH_NOTE}, and no sample plan to read` : 'plan-data.json is not valid JSON: no draft to read');
@@ -615,7 +665,7 @@ function fill(pair, where, ctx) {
       return [[flag, `${ctx.files.draft},${ctx.files.blank}`]];
     }
     case '--file': {
-      const file = { 'checkin add': 'answers', body: 'record', eating: 'plan', 'log add': 'session', 'track suggest': 'items', 'track add': 'items', 'track decline': 'items', 'track apply': 'changes', 'plan-write': 'draft' }[
+      const file = { 'checkin add': 'answers', body: 'record', eating: 'plan', 'log add': 'session', 'log edit': 'edit', 'track suggest': 'items', 'track add': 'items', 'track decline': 'items', 'track apply': 'changes', 'plan-write': 'draft', 'meal add': 'meal' }[
         where.key
       ];
       if (file && ctx.files[file]) return [[flag, ctx.files[file]]];
@@ -677,6 +727,8 @@ function argvs(cmd, pairs, ctx) {
   }
   // energy without the profile's age and height, or without a weigh-in: its documented exit 1.
   if (where.key === 'energy' && ctx.energyMissing) where.expect = ctx.energyMissing;
+  if (where.key === 'track morning' && where.flags.has('--off') && !ctx.morningSet) where.expect = { code: 1, error: 'morning', why: 'no morning time is set (none is, without Pahlavan): --off has nothing to turn off' };
+  if (where.key === 'track protein' && !ctx.proteinItem) where.expect = { code: 1, error: 'protein', why: 'no protein item is tracked' };
   let out = [[...cmd.words, ...cmd.positional]];
   for (const p of pairs) {
     const alts = fill(p, where, ctx);
@@ -725,6 +777,7 @@ function writeTargets() {
     join(COACH, 'checkins.json'),
     join(COACH, 'tracking.json'),
     join(COACH, 'eating-plan.json'),
+    join(COACH, 'meals.json'),
     join(COACH, 'nudges.json'),
     join(FITNESS, 'body-data.json'),
     join(FITNESS, 'fitness-log-data.json'),
@@ -1136,7 +1189,7 @@ function checkSections() {
 // What a fresh vault doesn't have yet: the coach's notes and folders its jobs
 // write, a vault's own optional local.md, and Pahlavan's settings file (made
 // on the plugin's first start). A missing one is skipped, never a failure.
-const MADE_LATER = new Set(['local.md', 'Athlete profile.md', 'Ledger.md', 'Decisions.md', 'Eating plan.md', 'Letters', 'Experiments', 'Progress Photos', 'Progress Reports', 'data.json', '6-Month Roadmap.md']);
+const MADE_LATER = new Set(['local.md', 'Athlete profile.md', 'Ledger.md', 'Decisions.md', 'Eating plan.md', 'Letters', 'Experiments', 'Progress Photos', 'Progress Reports', 'data.json', '6-Month Roadmap.md', 'meals.json']);
 const madeLater = (p) => MADE_LATER.has(p.replace(/\/+$/, '').split('/').pop());
 
 function checkPaths() {

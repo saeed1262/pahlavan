@@ -9,7 +9,7 @@
 // still shows.
 
 import { matchCatalogue, normalizeName } from '../adapters/vault/catalogue-match.ts';
-import { CATALOGUE, CATALOGUE_BY_ID, LEVELS, PATTERNS, usableWith, type Equipment, type Level, type Pattern } from '../core/data/exercises.ts';
+import { CATALOGUE, CATALOGUE_BY_ID, GRIPS, LEVELS, PATTERNS, usableWith, type Equipment, type Level, type MovementGrips, type Pattern } from '../core/data/exercises.ts';
 import { MUSCLES } from '../core/data/muscles.ts';
 import { normalizeEquipment } from '../core/plan/context.ts';
 import { CatalogueQueryError, ladderViews, muscleId, searchCatalogue, type CatalogueQuery, type LadderView, type MovementView } from './catalogue.ts';
@@ -212,6 +212,12 @@ function worksOf(v: MovementView): string {
   return v.muscles.helps.length ? cap(`helps ${list(v.muscles.helps)}`) : '';
 }
 
+/** "Overhand grip (as set up), or close neutral grip, underhand grip: name one in parentheses in your plan", or null. */
+function gripsText(g: MovementGrips | undefined): string | null {
+  if (!g) return null;
+  return `${cap(GRIPS[g.default].label)} (as set up), or ${g.options.map((o) => GRIPS[o.grip].label).join(', ')}: name one in parentheses in your plan`;
+}
+
 /** The movement guide's entry for a catalogue movement: its own text, its muscles on the body map, a video search by its name. */
 export function catalogueGuide(v: MovementView): GuideEntry {
   const main = muscleSlugs(v.muscles.main);
@@ -223,6 +229,7 @@ export function catalogueGuide(v: MovementView): GuideEntry {
     setup: v.guide.setup || null,
     do: v.guide.do || null,
     avoid: v.guide.avoid || null,
+    ...(CATALOGUE_BY_ID.get(v.id)?.grips ? { grips: gripsText(CATALOGUE_BY_ID.get(v.id)?.grips) } : {}),
     video: guideVideo(undefined, plainName(v.name)),
     main,
     helps: muscleSlugs(v.muscles.helps).filter((x) => !main.includes(x)),

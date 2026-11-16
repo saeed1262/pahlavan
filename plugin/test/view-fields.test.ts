@@ -1,7 +1,7 @@
 // Guards against a field on the view shadowing one of Obsidian's View or
 // Component members. A field named `open` once replaced View.open(), which
 // Obsidian calls to start the view, so the tab stayed blank with no error.
-// The reminder card's Modal gets the same check against Modal's members.
+// The reminder card's Modal and the meal form's get the same check against Modal's members.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -29,6 +29,13 @@ const MODAL_RESERVED = [
 
 test('no CardModal field shadows an Obsidian Modal member', () => {
   const src = readFileSync(new URL('../src/card-modal.ts', import.meta.url).pathname, 'utf8');
+  const fields = [...src.matchAll(/^\s+(?:private|protected|public)\s+(?:readonly\s+)?([A-Za-z_]\w*)\s*(?::|=)/gm)].map((m) => m[1]);
+  assert.ok(fields.length > 0, 'found the modal fields');
+  assert.deepEqual(fields.filter((f) => MODAL_RESERVED.includes(f!)), []);
+});
+
+test('no MealModal field shadows an Obsidian Modal member', () => {
+  const src = readFileSync(new URL('../src/meal-modal.ts', import.meta.url).pathname, 'utf8');
   const fields = [...src.matchAll(/^\s+(?:private|protected|public)\s+(?:readonly\s+)?([A-Za-z_]\w*)\s*(?::|=)/gm)].map((m) => m[1]);
   assert.ok(fields.length > 0, 'found the modal fields');
   assert.deepEqual(fields.filter((f) => MODAL_RESERVED.includes(f!)), []);

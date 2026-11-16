@@ -260,6 +260,18 @@ first, so a test holds that none is another entry's own name or alias: a
 movement the catalogue has answers to its own name. No two entries share a
 name, an id or an alias.
 
+**Grips.** Fourteen pulls, presses and a curl list the grips that change
+their path (`grips`: the one the guide describes, and the others, each with
+its own setup line; the vocabulary is `GRIPS`: overhand, wide or close
+overhand, underhand, neutral, close neutral). A grip is not an entry of its
+own: a plan names it in parentheses ("Lat Pulldown (close neutral grip)").
+The name matching drops parenthesised text, so the item keeps the entry's
+muscles, pattern and abdominal-strain tag, and `gripOf` reads the grip; the
+full name is its own lift in the log, since the loads differ by grip.
+Chin-up and hammer curl stay entries of their own, as before. What a grip
+changes is measured only acutely (EMG and the load handled; `rules.md`,
+"Path variety"), so the grips are for variety and a different path.
+
 ## Demand tags
 
 | Tag | The movement asks for | Entries |
@@ -331,7 +343,10 @@ physiotherapist has reviewed them (open question 4), would take:
   findings' lists name the new overhead presses, loaded hinges and hard
   single-leg moves too).
 - **Plan names** match all of them (names, ids, aliases), so their tags count
-  in every screen and number.
+  in every screen and number; a grip in parentheses is read on the movements
+  that list grips.
+- **The plan check's repeat notes** (`same-path-twice`,
+  `movement-twice-a-week`) read each item's pattern, regions and grip.
 - **The Hotel version's swaps** choose from the 100 starter movements
   (`STARTER_IDS`): their ranking was tuned on that set, and their output
   stays as it was. The coach designs from the whole catalogue.

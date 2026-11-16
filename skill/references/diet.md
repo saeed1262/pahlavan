@@ -186,6 +186,12 @@ other day.** Ask what the user usually cooks first and adapt these to it.
   doesn't recommend them; vitamins and the rest are the user's and their
   clinician's call.
 
+**Meals.** Once there is an eating plan, or before one, the user can send a
+meal's photo or description to `/fitness-coach meal` (`meal.md`): the coach
+estimates it, records it and ticks Protein when the day reaches the floor.
+It follows this file's screen: where `counting` is `"none"`, protein only,
+in palms; under 18, no meal job.
+
 ## 8. The job
 
 1. Read: the Athlete profile (goal, weight, age, height, sex), the weight

@@ -74,6 +74,18 @@ describe('track day', () => {
     const { out } = cli(['track', 'day', '--vault', 'v', '--date', DATE]);
     assert.deepEqual(out.training.value, { logged: true, sessions: [{ type: 'custom', name: 'Easy run' }], workoutTicked: true, planned: true, didYouTrain: null, mark: null });
     assert.deepEqual([out.morning.value.done, out.morning.value.checkedAt, out.morning.value.at], [true, '2026-04-10T07:10:00.000Z', '07:30']);
+    // Answered without a check-in time (the coach's body write): done, and the note says so.
+    const asked = cli(['track', 'day', '--vault', 'v', '--date', DATE], (f) => {
+      const b = JSON.parse(f[BODY]!);
+      const { checkedAt: _c, ...rest } = b.days[DATE];
+      b.days[DATE] = { ...rest, energy: 4 };
+      f[BODY] = JSON.stringify(b);
+      const n = JSON.parse(f[NUDGES]!);
+      if (n.days?.[DATE]) delete n.days[DATE].morning;
+      f[NUDGES] = JSON.stringify(n);
+    });
+    assert.deepEqual([asked.out.morning.value.done, asked.out.morning.value.checkedAt], [true, null]);
+    assert.match(asked.out.morning.reason.note, /morning questions were answered/);
     // Thursday 9 April: the Workout tick, no session logged; made up here, a rest mark and the evening answer.
     const rest = cli(['track', 'day', '--vault', 'v', '--date', '2026-04-09'], (f) => {
       const b = JSON.parse(f[BODY]!);

@@ -92,7 +92,7 @@ export function everySetNames(read: VaultRead, entry: Obj, frozen: readonly { na
  * pain, equipment or energy, the Log panel's reasons). Null when it is fine
  * (or not given), else what is wrong.
  */
-function skipWhyShape(v: unknown): string | null {
+export function skipWhyShape(v: unknown): string | null {
   if (v === undefined || v === null) return null;
   if (!isObj(v)) return `"skipWhy" gives each skipped line's reason by its name: {"<line>": "${SKIP_REASONS.join('" | "')}"}`;
   for (const [k, r] of Object.entries(v)) {

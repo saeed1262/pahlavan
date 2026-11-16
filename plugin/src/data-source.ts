@@ -14,6 +14,10 @@ import { INBOX_FILES, INBOX_PATHS, isEntryFile, readRefused, refusedLine, type R
 import { buildCheckin, buildPlan, buildProgress, buildProgressMore, buildRoutine, buildSession, buildToday, type SessionPick } from '../../src/report/index.ts';
 import { buildMovements, planLevelsOf, planNamesOf, type MovementsQuery } from '../../src/report/movements-screen.ts';
 import { paths } from '../../src/adapters/vault/layout.ts';
+import { proteinItemOf } from '../../src/core/protein.ts';
+import { PENDING_MEAL_FILE } from '../../src/core/validate.ts';
+import { readPending, type PendingRead } from '../../src/report/meal-pending.ts';
+import { buildMealsCard, type MealsCard } from '../../src/report/meals-card.ts';
 
 /** The parts of Obsidian's DataAdapter the plugin reads with (read-only). */
 export interface AdapterLike {
@@ -48,7 +52,13 @@ const isLetter = (path: string): boolean => path.startsWith(`${paths().letters}/
  * Coach/sitting.json is not among them: it is written every 2 minutes while
  * someone sits, and the screens follow it through the reminders' onChange.
  */
-export const watchedCoach = (): string[] => [paths().tracking, paths().nudges];
+export const watchedCoach = (): string[] => [paths().tracking, paths().nudges, paths().meals];
+
+/** A waiting meal's entry (the meal form's, the other Mac's, or the coach removing it): the Food tab's Meals card redraws. Its photo comes first and isn't watched. */
+export function isPendingWatched(path: string): boolean {
+  if (!path.startsWith(`${paths().pendingMeals}/`)) return false;
+  return PENDING_MEAL_FILE.test(path.slice(paths().pendingMeals.length + 1));
+}
 
 /**
  * The phone's inbox: an entry file arriving (obsidian-git's pull) imports it,
@@ -62,7 +72,7 @@ export function isInboxWatched(path: string): boolean {
 }
 
 export function isWatched(path: string): boolean {
-  return watchedPaths().includes(path) || watchedCoach().includes(path) || isBaseline(path) || path === paths().decisions || isLetter(path) || isInboxWatched(path);
+  return watchedPaths().includes(path) || watchedCoach().includes(path) || isBaseline(path) || path === paths().decisions || isLetter(path) || isInboxWatched(path) || isPendingWatched(path);
 }
 
 /**
@@ -123,7 +133,25 @@ export class PahlavanData {
     const fit = this.at(paths().fitness);
     this.files = (await this.adapter.exists(fit)) ? (await this.adapter.list(fit)).files : [];
     this.refused = readRefused(await readerOf(this.adapter).readText(this.at(INBOX_PATHS.refused)));
+    // The Meals card: the coach's estimates (Coach/meals.json) and the meals waiting for it (Coach/Inbox/meals/).
+    this.mealsText = await io.readText(this.at(paths().meals));
+    const dir = this.at(paths().pendingMeals);
+    const names = await io.listDir(dir);
+    const texts: Record<string, string | null> = {};
+    for (const n of names ?? []) if (PENDING_MEAL_FILE.test(n)) texts[n] = await io.readText(`${dir}/${n}`);
+    this.pending = readPending(names, (f) => texts[f] ?? null);
     return this.read;
+  }
+
+  private mealsText: string | null = null;
+  private pending: PendingRead = { meals: [], refused: [], strays: [] };
+
+  /** The Food tab's Meals card for `date`: the day's meals as the coach estimated them, and the meals waiting for it. */
+  meals(date: IsoDate): MealsCard {
+    const eating = this.read?.data.eatingPlan ?? null;
+    const item = proteinItemOf(eating, this.tr?.tracking?.items ?? []);
+    const goalG = item?.goal?.amount ?? eating?.protein.floorG ?? null;
+    return buildMealsCard({ mealsText: this.mealsText, pending: this.pending, date, counting: eating?.counting ?? null, goalG });
   }
 
   private refused: RefusedEntry[] = [];

@@ -12,7 +12,7 @@
 // targeted (fewest muscles trained), then catalogue order.
 
 import { matchCatalogue, NAME_SYNONYMS, normalizeName, ownNames } from '../adapters/vault/catalogue-match.ts';
-import { CATALOGUE, CATALOGUE_BY_ID, EQUIPMENT, LEVELS, MOVEMENT_TAGS, MOVEMENT_USES, PATTERNS, usableWith, type CatalogueEntry, type Equipment, type Level, type MovementGuide, type MovementTag, type MovementUse, type Pattern } from '../core/data/exercises.ts';
+import { CATALOGUE, CATALOGUE_BY_ID, EQUIPMENT, GRIP_IDS, GRIPS, LEVELS, MOVEMENT_TAGS, MOVEMENT_USES, PATTERNS, usableWith, type CatalogueEntry, type Equipment, type Level, type MovementGrips, type MovementGuide, type MovementTag, type MovementUse, type Pattern } from '../core/data/exercises.ts';
 import { CATALOGUE_LADDERS, LADDERS } from '../core/data/ladders.ts';
 import { MUSCLES, MUSCLE_IDS } from '../core/data/muscles.ts';
 import { explainRegion, nearestText, REGION_IDS, REGIONS, REGIONS_BY_ID } from '../core/data/regions.ts';
@@ -191,6 +191,8 @@ export interface MovementView {
   hotel: boolean;
   /** The guide text: the setup, the movement, the mistake to avoid. */
   guide: MovementGuide;
+  /** Where the grip changes the path: the grip the guide describes and the others, each with its setup line (`vocabulary.grips` says what each is); left out for the rest. A plan names one in parentheses. */
+  grips?: MovementGrips;
   fit: RankFit;
 }
 
@@ -236,6 +238,7 @@ function view(r: Ranked): MovementView {
     uses: [...e.uses],
     hotel: e.hotel,
     guide: { ...e.guide },
+    ...(e.grips ? { grips: { default: e.grips.default, options: e.grips.options.map((o) => ({ ...o })) } } : {}),
     fit: r.fit,
   };
 }
@@ -302,6 +305,7 @@ export function vocabulary() {
     regions: REGIONS.map((r) => ({ id: r.id, muscle: r.muscle, label: r.label })),
     risk: Object.entries(MOVEMENT_TAGS).map(([id, meaning]) => ({ id, meaning })),
     uses: Object.entries(MOVEMENT_USES).map(([id, meaning]) => ({ id, meaning })),
+    grips: GRIP_IDS.map((id) => ({ id, label: GRIPS[id].label, meaning: GRIPS[id].text })),
   };
 }
 

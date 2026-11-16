@@ -377,6 +377,8 @@ export interface GuideEntry {
   setup: string | null;
   do: string | null;
   avoid: string | null;
+  /** A catalogue movement's grips (the guide's first, then the others), where the grip changes the path; left out for the rest. */
+  grips?: string | null;
   video: { url: string; label: string; checked: boolean };
   /** Body-map slugs: the muscles it mainly works, and those it helps. */
   main: string[];

@@ -147,7 +147,8 @@ later, not a summary. Frontmatter: `tags: [fitness, check-in]`,
 6. **Phase scorecard**: one row per current-phase target from the roadmap
    with status and a 🟢/🟡/🔴/⚪ verdict.
 7. **Photos**: comparison grid (rows = sets, cols = poses; escape embed
-   pipes: `![[…\|220]]`), then a pose-by-pose table (baseline read / now /
+   pipes: `![[…\|220]]`; without Pahlavan, Markdown image links relative to
+   the report, `![front](../Progress%20Photos/<date>/front.jpeg)`), then a pose-by-pose table (baseline read / now /
    verdict), then a **posture re-assessment** against each baseline
    coach's-read flag.
 8. **Coach's read**: `> [!success] Keep doing`, `> [!warning] Fix` (in

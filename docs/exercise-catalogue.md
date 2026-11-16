@@ -9,6 +9,7 @@ How to read an entry:
 - **Easier** and **Harder:** the nearest step down or up.
 - **Asks of the body:** what it demands, such as load overhead, impact or a deep knee bend. The coach weighs these against your screening; [the list at the end](#what-each-demand-means) says what each means.
 - **Abdominal strain:** low, moderate or high, as Pahlavan screens movements after an injury.
+- **Grips:** where the grip changes the path, the one the setup describes and the others, each with its own setup. Put one in your plan in parentheses ("Lat pulldown (close neutral grip)"): it counts the same muscles and keeps its own history, since the weights differ by grip.
 
 Groups: Squat (15), Hinge (24), Lunge and single leg (14), Horizontal push (19), Rows (12), Overhead press (10), Vertical pull (14), Carries (5), Core: bracing (11), Core: resisting rotation (8), Core: crunching (7), Calves (6), Biceps (5), Triceps (7), Rear delts (7), Side delts (3), Neck and upper back (5), Hip abduction (2), Chest fly (3), Jumps (5), Conditioning (17), Mobility (25), Skills (21).
 
@@ -756,6 +757,7 @@ Beginner · dumbbell and bench (or kettlebell) · added weight · abdominal stra
 - **Setup:** Lie on the bench, feet planted, shoulder blades pulled together.
 - **Do:** Lower to the sides of the chest, then press up and slightly in.
 - **Avoid:** Bouncing the weights off the chest, or the shoulders rolling forward.
+- **Grips:** overhand grip (the setup above); neutral grip: Lie on the bench, feet planted, shoulder blades pulled together, palms facing each other, so the elbows stay closer to the sides.
 - **Also called:** dumbbell bench press, dumbbell chest press
 - **Asks of the body:** supine
 
@@ -769,6 +771,7 @@ Beginner · dumbbell and bench · added weight · abdominal strain low
 - **Setup:** Bench at a low incline, wrists stacked over the elbows.
 - **Do:** Lower toward the upper chest, then press up.
 - **Avoid:** Setting the bench so steep it becomes a shoulder press.
+- **Grips:** overhand grip (the setup above); neutral grip: Bench at a low incline, wrists stacked over the elbows, palms facing each other.
 - **Also called:** incline dumbbell bench press
 
 ### Barbell bench press
@@ -781,6 +784,7 @@ Beginner · barbell and bench · added weight · abdominal strain moderate
 - **Setup:** Eyes under the bar, feet planted; use a spotter or safety arms.
 - **Do:** Lower to the lower chest with control, then press up.
 - **Avoid:** Bouncing the bar off the chest, or the hips lifting.
+- **Grips:** overhand grip (the setup above); close overhand grip: Eyes under the bar, feet planted, hands about shoulder width, elbows close to the sides; use a spotter or safety arms.
 - **Also called:** flat bench press, barbell bench
 - **Asks of the body:** supine
 
@@ -794,6 +798,7 @@ Beginner · machine · added weight · abdominal strain low
 - **Setup:** Seat set so the handles start at mid-chest height.
 - **Do:** Press without the shoulders rolling forward, then return slowly.
 - **Avoid:** Letting the stack crash between reps.
+- **Grips:** overhand grip (the setup above); neutral grip: Seat set so the handles start at mid-chest height, hands on the upright handles where the machine has them, palms facing.
 - **Also called:** chest press, seated chest press
 
 ### Wall push-up
@@ -1000,6 +1005,7 @@ Beginner · dumbbell and bench · added weight · abdominal strain low
 - **Setup:** Chest on an incline bench, weights hanging.
 - **Do:** Row both weights up together and pause with the shoulder blades squeezed.
 - **Avoid:** Lifting the chest off the pad to heave the weights.
+- **Grips:** neutral grip (the setup above); overhand grip: Chest on an incline bench, weights hanging, palms facing your feet, so the elbows travel out wide.
 - **Also called:** incline dumbbell row, chest supported row
 
 ### Barbell row
@@ -1012,6 +1018,7 @@ Intermediate · barbell · added weight · abdominal strain moderate
 - **Setup:** Hinge to about 45 degrees and hold it, bar hanging at arm's length.
 - **Do:** Pull the bar to the lower ribs, then lower with control.
 - **Avoid:** Heaving with the hips, or standing up as you pull.
+- **Grips:** overhand grip (the setup above); underhand grip: Hinge to about 45 degrees and hold it, palms up, hands about shoulder width, elbows close to the sides.
 - **Also called:** bent over row, barbell bent over row
 - **Asks of the body:** grip heavy, back bent over
 
@@ -1025,6 +1032,7 @@ Beginner · cable · added weight · abdominal strain low
 - **Setup:** Sit tall, slight knee bend.
 - **Do:** Pull the handle to the belly, then let the shoulders reach forward on the return.
 - **Avoid:** Rocking the torso back and forth.
+- **Grips:** close neutral grip (the setup above); wide overhand grip: Sit tall, slight knee bend, a long bar held wider than the shoulders, palms down, so the elbows travel out to the sides.
 - **Also called:** cable row, low row
 
 ### Machine row
@@ -1037,6 +1045,7 @@ Beginner · machine · added weight · abdominal strain low
 - **Setup:** Chest on the pad, seat set so the handles are at chest height.
 - **Do:** Pull the elbows back, then return slowly.
 - **Avoid:** Letting the weight yank the arms forward.
+- **Grips:** neutral grip (the setup above); overhand grip: Chest on the pad, seat set so the handles are at chest height, hands on the horizontal handles, palms down, elbows out.
 - **Also called:** seated machine row
 
 ### Door frame row (holding a solid frame)
@@ -1115,6 +1124,7 @@ Beginner · dumbbell and bench (or kettlebell) · added weight · abdominal stra
 - **Setup:** Back supported on an upright bench, weights at the shoulders.
 - **Do:** Press up without the ribs flaring, then lower to about ear height.
 - **Avoid:** Arching the back to finish the press.
+- **Grips:** overhand grip (the setup above); neutral grip: Back supported on an upright bench, weights at the shoulders, palms facing each other, elbows a little forward.
 - **Also called:** seated dumbbell press
 - **Asks of the body:** shoulder overhead
 
@@ -1167,6 +1177,7 @@ Beginner · dumbbell · added weight · abdominal strain moderate
 - **Setup:** Stand tall, weights at the shoulders, glutes squeezed and ribs down.
 - **Do:** Press up and slightly back over the head, then lower to the shoulders under control.
 - **Avoid:** Leaning back to push the weights up.
+- **Grips:** overhand grip (the setup above); neutral grip: Stand tall, weights at the shoulders, palms facing each other, glutes squeezed and ribs down.
 - **Also called:** dumbbell overhead press
 - **Asks of the body:** shoulder overhead · fits a hotel room
 
@@ -1245,6 +1256,7 @@ Beginner · machine · added weight · abdominal strain low
 - **Setup:** Thighs locked under the pad, grip a little wider than the shoulders.
 - **Do:** Pull the bar to the upper chest, chest up, then let it rise with control.
 - **Avoid:** Leaning far back, or pulling the bar behind the neck.
+- **Grips:** overhand grip (the setup above); close neutral grip: Thighs locked under the pad, a close neutral handle (a V-handle or parallel grips), palms facing. underhand grip: Thighs locked under the pad, palms toward you, hands about shoulder width.
 - **Also called:** lat pull down, wide grip pulldown, cable pulldown
 - **Asks of the body:** shoulder overhead
 
@@ -1304,6 +1316,7 @@ Intermediate · pull up bar · bodyweight · abdominal strain low
 - **Setup:** Grip a little wider than the shoulders, hanging from straight arms, shoulders down.
 - **Do:** Pull until the chin clears the bar, then lower to straight arms.
 - **Avoid:** Kicking or swinging to get the chin over.
+- **Grips:** overhand grip (the setup above); neutral grip: Hands on parallel handles, palms facing, hanging from straight arms, shoulders down.
 - **Also called:** overhand pull up
 - **Asks of the body:** shoulder overhead, shoulder hang, grip heavy
 
@@ -1388,6 +1401,7 @@ Beginner · machine · bodyweight · abdominal strain low
 - **Setup:** Set the counterweight; more makes it easier.
 - **Do:** Pull the elbows down to the ribs, then lower all the way to straight arms.
 - **Avoid:** Cutting the range short at the bottom.
+- **Grips:** overhand grip (the setup above); neutral grip: Set the counterweight (more makes it easier), hands on the parallel handles, palms facing. underhand grip: Set the counterweight (more makes it easier), palms toward you, hands about shoulder width.
 - **Also called:** gravitron
 - **Asks of the body:** shoulder overhead, shoulder hang
 
@@ -1906,6 +1920,7 @@ Intermediate · dumbbell and bench · added weight · abdominal strain low
 - **Setup:** Bench at about 45 degrees, arms hanging behind the body, light weights.
 - **Do:** Curl without bringing the elbows forward, then lower to a full stretch.
 - **Avoid:** Going heavy enough that the elbows swing forward.
+- **Grips:** underhand grip (the setup above); neutral grip: Bench at about 45 degrees, arms hanging behind the body, light weights, palms facing each other (an incline hammer curl).
 - **Also called:** incline curl
 
 ## Triceps

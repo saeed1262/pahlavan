@@ -68,6 +68,8 @@ import type { SessionMode } from '../../src/core/variant.ts';
 import { CardModal } from '../src/card-modal.ts';
 import { CheckinWriter, type MkdirAdapter } from '../src/checkin-writer.ts';
 import { TrackingWriter } from '../src/tracking-writer.ts';
+import { MealFormWriter } from '../src/meal-writer.ts';
+import { MealModal } from '../src/meal-modal.ts';
 import { PahlavanData } from '../src/data-source.ts';
 import { LogWriter } from '../src/log-writer.ts';
 import type { ProgressSection } from '../src/ui/progress-more.ts';
@@ -459,6 +461,13 @@ function scenario(card: string): { date: string; time: string; key: string; stan
       return { date: '2026-04-10', time: '12:00', key: card };
   }
 }
+if (DEMO && !foodToday) {
+  // MADE UP, the demo only: a breakfast the coach estimated, and a snack waiting from the meal form, so the Meals card isn't empty.
+  const d = params.get('today') ?? PREVIEW_TODAY;
+  files['3-Personal/Fitness/Coach/meals.json'] = `${JSON.stringify({ schemaVersion: 1, meals: [{ id: `${d}-0740`, date: d, at: '07:40', name: 'Breakfast: Greek yogurt, oats and berries', items: [{ food: 'Greek yogurt', portion: 'about 200 g (a cupped hand and a half)' }, { food: 'oats', portion: 'about 40 g (a cupped hand)' }, { food: 'berries', portion: 'a fist' }], estimate: { proteinG: 34, kcal: 520, fiberG: 7, fatG: 12, carbsG: 68 }, confidence: 'medium', from: 'photo', note: 'honey not visible: none assumed', by: 'coach' }] }, null, 2)}\n`;
+  const waiting = `${d}T10-21-05`;
+  files[`3-Personal/Fitness/Coach/Inbox/meals/${waiting}-meal.json`] = `${JSON.stringify({ v: 1, date: d, at: '10:20', text: 'A protein shake with milk and a banana', made: `${d}T10:21:05` }, null, 2)}\n`;
+}
 const folders = new Set(Object.keys(files).flatMap((p) => p.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'))));
 const binaries: Record<string, ArrayBuffer> = {};
 (window as unknown as { PAHLAVAN_BINARIES: typeof binaries }).PAHLAVAN_BINARIES = binaries;
@@ -491,6 +500,7 @@ const adapter: MkdirAdapter & { writeBinary(p: string, d: ArrayBuffer): Promise<
   },
 };
 const TODAY = params.get('today') ?? foodToday ?? PREVIEW_TODAY;
+const mealWriter = new MealFormWriter(adapter, async (p) => ({ data: p.data, ext: ((/\.([a-z0-9]+)$/i.exec(p.name) ?? [])[1] ?? 'jpeg').toLowerCase() }));
 
 /** The plugin's notices, drawn as a toast at the top right (Obsidian's Notice, as the harness shows it). */
 function toast(message: string): void {
@@ -616,6 +626,19 @@ const view = new PahlavanView(new WorkspaceLeaf() as never, {
   trackingWriter: new TrackingWriter(adapter),
   offsetMinutes: () => 0,
   openSettings: () => openSettings(),
+  logMeal: () => {
+    // The real form in the stub's Modal; a photo is saved as it is (no sips here), in this page's memory.
+    const at = `${String(Number(params.get('hour') ?? 11)).padStart(2, '0')}:00`;
+    new MealModal({} as never, {
+      start: { date: TODAY, at },
+      save: (input) => mealWriter.save(input, { date: TODAY, time: `${at}:00` }, TODAY),
+      saved: (_id, photo) => {
+        toast(`Saved for your coach${photo ? ', with its photo' : ''}. Type /fitness-coach meal in Claude Code to have it estimated.`);
+        void view.reload();
+      },
+    }).open();
+  },
+  mealWriter,
   clockText: (ms) => new Date(ms).toISOString().slice(11, 16),
   notify: toast,
   requestReload: () => void view.reload(),

@@ -57,8 +57,9 @@ The neck check **(H)**:
   the same answer: no hard training.
 - The day itself is recorded by the user: **I'm ill today** on the morning
   check-in (the Check-in screen or the morning card) saves `illness` for
-  that day, and readiness's `no-hard-training` follows. The coach never
-  writes it.
+  that day, and readiness's `no-hard-training` follows. The coach writes it
+  only in the `today` job, from the user's own answer (`body`'s
+  `morning.illness`), never inferred.
 
 ## Pain
 

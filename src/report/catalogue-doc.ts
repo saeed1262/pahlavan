@@ -4,7 +4,7 @@
 // neither can drift from the engine. Pure: the catalogue data in, the text
 // out; the caller adds the version line when it has one.
 
-import { CATALOGUE, MOVEMENT_TAGS, MOVEMENT_USES, PATTERNS, type CatalogueEntry, type Pattern } from '../core/data/exercises.ts';
+import { CATALOGUE, GRIPS, MOVEMENT_TAGS, MOVEMENT_USES, PATTERNS, type CatalogueEntry, type Pattern } from '../core/data/exercises.ts';
 import { searchCatalogue, vocabulary } from './catalogue.ts';
 
 /** Each pattern's section title, in plain words (this page and the Movements tab). */
@@ -76,6 +76,7 @@ export function catalogueMarkdown(opts: CatalogueDocOptions = {}): string {
     '- **Easier** and **Harder:** the nearest step down or up.',
     '- **Asks of the body:** what it demands, such as load overhead, impact or a deep knee bend. The coach weighs these against your screening; [the list at the end](#what-each-demand-means) says what each means.',
     '- **Abdominal strain:** low, moderate or high, as Pahlavan screens movements after an injury.',
+    '- **Grips:** where the grip changes the path, the one the setup describes and the others, each with its own setup. Put one in your plan in parentheses ("Lat pulldown (close neutral grip)"): it counts the same muscles and keeps its own history, since the weights differ by grip.',
     '',
     `Groups: ${groups.map((g) => `${PATTERN_TITLE[g.pattern] ?? words(g.pattern)} (${g.items.length})`).join(', ')}.`,
     '',
@@ -94,6 +95,7 @@ export function catalogueMarkdown(opts: CatalogueDocOptions = {}): string {
       const steps = [e.easier.length ? `**Easier:** ${names(e.easier)}.` : null, e.harder.length ? `**Harder:** ${names(e.harder)}.` : null].filter(Boolean);
       if (steps.length) out.push(`- ${steps.join(' ')}`);
       out.push(`- **Setup:** ${sentence(e.guide.setup)}`, `- **Do:** ${sentence(e.guide.do)}`, `- **Avoid:** ${sentence(e.guide.avoid)}`);
+      if (e.grips) out.push(`- **Grips:** ${GRIPS[e.grips.default].label} (the setup above); ${e.grips.options.map((o) => `${GRIPS[o.grip].label}: ${sentence(o.setup)}`).join(' ')}`);
       if (e.aliases.length) out.push(`- **Also called:** ${e.aliases.join(', ')}`);
       const extra = [e.risk.length ? `**Asks of the body:** ${e.risk.map(words).join(', ')}` : null, e.uses.length ? `**Suits:** ${e.uses.map(words).join(', ')}` : null, e.hotel ? 'fits a hotel room' : null].filter(Boolean);
       if (extra.length) out.push(`- ${extra.join(' · ')}`);

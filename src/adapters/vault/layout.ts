@@ -32,6 +32,10 @@ export interface Layout {
   ledger: string;
   checkins: string;
   eating: string;
+  /** The meals the coach estimated (`engine meal`). */
+  meals: string;
+  /** The meals waiting for the coach's estimate (Pahlavan's meal form; `engine meal pending`). */
+  pendingMeals: string;
   tracking: string;
   nudges: string;
   sitting: string;
@@ -63,6 +67,8 @@ export function layoutOf(f: Folders): Layout {
     ledger: `${coach}/ledger.json`,
     checkins: `${coach}/checkins.json`,
     eating: `${coach}/eating-plan.json`,
+    meals: `${coach}/meals.json`,
+    pendingMeals: `${coach}/Inbox/meals`,
     tracking: `${coach}/tracking.json`,
     nudges: `${coach}/nudges.json`,
     sitting: `${coach}/sitting.json`,

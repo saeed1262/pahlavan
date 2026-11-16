@@ -12,10 +12,14 @@
 // engine's buildFood; a plan without the coach's words, times or ideas
 // draws what it holds. Every number carries its Why (the report's `why`, by
 // key) in the hover tooltip, the rule id only in data-rule. Each card has
-// its section id (`data-sec`), for At a glance and its fold. Standard DOM only.
+// its section id (`data-sec`), for At a glance and its fold. The Meals card
+// (after Today, and under the empty state) lists today's meals as the coach
+// estimated them and the meals waiting for it from the meal form. Standard
+// DOM only.
 
 import { bodyFmt } from './units.ts';
 import type { FoodDayRow, FoodReport } from '../../../src/report/food.ts';
+import type { MealsCard } from '../../../src/report/meals-card.ts';
 import { goingStatus, type Run } from '../../../src/report/glance.ts';
 import { banner, phaseLabel, type BannerPhase, type RingSeg } from './banner.ts';
 import { h, icon, s, type Child } from './dom.ts';
@@ -50,6 +54,16 @@ export interface FoodContext {
   /** How many ideas on from today's each meal shows (this session only, never saved). */
   ideaSteps?: Readonly<Record<string, number>>;
   onIdea?: (meal: string) => void;
+  /** The Meals card: today's meals as the coach estimated them and the ones waiting for it (absent: no card). */
+  meals?: MealsCard | null;
+  /** Opens the meal form (absent: read only). */
+  onLogMeal?: () => void;
+  /** Takes a waiting meal out, by its id (absent: read only). */
+  onRemoveMeal?: (id: string) => void;
+  /** Copies the meal command. */
+  onCopyMeal?: () => void;
+  /** A waiting meal being removed. */
+  mealBusy?: string | null;
 }
 
 const ms = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
@@ -531,6 +545,53 @@ function goingCard(m: Planned, ctx: FoodContext, W: number): HTMLElement {
   );
 }
 
+// ---------------------------------------------------------------- meals
+
+const CONFIDENCE_WORD: Record<string, string> = { low: 'a rough guess', medium: 'a fair estimate', high: 'a close estimate' };
+const waitWhen = (w: MealsCard['waiting'][number], today: string) => `${w.date === today ? 'Today' : fmt.wd(w.date)}${w.at ? `, ${time(w.at)}` : ''}`;
+const snippet = (t: string) => (t.length > 70 ? `${t.slice(0, 68).trimEnd()}…` : t);
+
+function mealsCard(c: MealsCard, ctx: FoodContext): HTMLElement {
+  const none = c.counting === 'none';
+  const t = c.totals;
+  const rows = c.meals.map((x) => h('div', { class: 'pv-fd-meal', 'data-meal': x.id },
+    h('span', { class: 'pv-fd-meal-at' }, x.at ? time(x.at) : ''),
+    h('div', { class: 'pv-fd-meal-t' },
+      h('b', {}, x.name),
+      none ? null : h('small', {}, `about ${x.proteinG} g protein`, x.kcal !== null ? ` · about ${kcal(x.kcal)} kcal` : '', ` · ${CONFIDENCE_WORD[x.confidence] ?? x.confidence}`)),
+  ));
+  const partial = t && t.partial.includes('kcal') && t.kcal !== null ? ` (calories from ${c.meals.filter((x) => x.kcal !== null).length} of ${t.meals} meals)` : '';
+  const sum = t && !none
+    ? h('div', { class: 'pv-fd-meal-sum' }, 'So far today: ', h('b', {}, `about ${t.proteinG} g protein`), c.goalG !== null ? ` of your ${c.goalG} g` : '', t.kcal !== null ? [' · ', h('b', {}, `about ${kcal(t.kcal)} kcal`), partial] : null)
+    : null;
+  const waiting = c.waiting.length
+    ? h('div', { class: 'pv-fd-meal-wait' },
+      h('div', { class: 'pv-fd-h' }, `Waiting for your coach (${c.waiting.length})`),
+      c.waiting.map((w) => h('div', { class: 'pv-fd-meal is-waiting', 'data-wait': w.id },
+        h('span', { class: 'pv-fd-meal-at' }, w.photo ? icon('camera') : icon('bowl')),
+        h('div', { class: 'pv-fd-meal-t' },
+          h('b', {}, w.text ? snippet(w.text) : 'A photo'),
+          h('small', {}, waitWhen(w, c.date), w.photo && !w.photoFound ? ' · the photo is on the other Mac' : '')),
+        ctx.onRemoveMeal ? h('button', { class: 'pv-btn-quiet', disabled: ctx.mealBusy === w.id, 'aria-label': 'Remove this meal', 'data-k': `fd-meal-rm-${w.id}`, onclick: () => ctx.onRemoveMeal!(w.id) }, ctx.mealBusy === w.id ? 'Removing…' : 'Remove') : null,
+      )),
+      h('div', { class: 'pv-fd-meal-cmd' }, h('span', {}, 'Type ', h('code', {}, '/fitness-coach meal'), ' in Claude Code: your coach estimates them and they move up here.'),
+        ctx.onCopyMeal ? h('button', { class: 'pv-btn-quiet', 'data-k': 'fd-meal-copy', onclick: () => ctx.onCopyMeal!() }, icon('clipboard'), 'Copy the command') : null),
+    )
+    : null;
+  const empty = !c.meals.length && !c.waiting.length ? h('p', { class: 'pv-faint' }, 'No meals logged today. Log one here with a photo or a few words, and your coach estimates it.') : null;
+  return h('section', { class: 'pv-card pv-fd-meals', 'data-sec': 'meals' },
+    h('div', { class: 'pv-kicker' }, 'Meals'),
+    h('h3', { class: 'pv-card-title' }, 'Today’s meals'),
+    c.meals.length ? h('div', { class: 'pv-card-sub' }, none ? 'As your coach recorded them: hand portions, no numbers.' : 'Your coach’s estimates: about, never measured.') : null,
+    rows.length ? h('div', { class: 'pv-fd-meal-list' }, rows) : null,
+    sum,
+    waiting,
+    empty,
+    c.problems.length ? h('div', { class: 'pv-notes' }, c.problems.map((p) => h('div', { class: 'pv-note' }, icon('info'), h('span', {}, p)))) : null,
+    ctx.onLogMeal ? h('button', { class: 'pv-btn-primary pv-fd-meal-log', 'data-k': 'fd-meal-log', onclick: () => ctx.onLogMeal!() }, icon('plus'), 'Log a meal') : null,
+  );
+}
+
 // ---------------------------------------------------------------- no plan yet
 
 function emptyCard(ctx: FoodContext): HTMLElement {
@@ -559,7 +620,7 @@ export function renderFood(root: HTMLElement, m: Food, ctx: FoodContext): void {
   const notes = m.notes.filter((n) => n.code !== 'no-plan');
   const calm = notes.length ? h('div', { class: 'pv-notes' }, notes.map((n) => h('div', { class: 'pv-note' }, icon('info'), h('span', {}, n.text)))) : null;
   if (!m.plan) {
-    root.replaceChildren(hero(m, ctx), ...(calm ? [calm] : []), h('div', { class: 'pv-fd-grid' }, h('div', { class: 'pv-fd-wide' }, emptyCard(ctx))));
+    root.replaceChildren(hero(m, ctx), ...(calm ? [calm] : []), h('div', { class: 'pv-fd-grid' }, h('div', { class: 'pv-fd-wide' }, emptyCard(ctx), ctx.meals ? mealsCard(ctx.meals, ctx) : null)));
     return;
   }
   const p = m;
@@ -575,7 +636,7 @@ export function renderFood(root: HTMLElement, m: Food, ctx: FoodContext): void {
     planCard(p),
     h('div', { class: 'pv-fd-grid' },
       h('div', { class: 'pv-fd-main' }, dayCard(p, ctx)),
-      h('div', { class: 'pv-fd-side' }, todayCard(p, ctx), tipsCard(p), goingCard(p, ctx, W)),
+      h('div', { class: 'pv-fd-side' }, todayCard(p, ctx), ctx.meals ? mealsCard(ctx.meals, ctx) : null, tipsCard(p), goingCard(p, ctx, W)),
     ),
   );
 }

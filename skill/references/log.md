@@ -134,9 +134,35 @@ Pahlavan picks up an edit made here even if it was open.
   that changed), `before`, `after`, `dryRun`, `written`. The one-line confirmation
   names its `date`, `type` and `lift`.
 
+## A logged session changed or taken out
+
+`log show --date D --type T [--label L]` reads the session as `log edit`
+takes it (`input`), with its checklist's line names (`lines`), and writes
+nothing. Then:
+
+- **An edit** gives only the fields that change, in a file (`{"notes":
+  "...", "durationMin": 55}`; the fields: `date`, `lift1`, `lift2`,
+  `durationMin`, `cardioMin`, `cardioMode`, `rating`, `postureDrill`,
+  `notes`, `swaps`, `sessionRpe`, `pain`, `hotel`, `trackingLevel`,
+  `exerciseSets`, `skipped`, `skipWhy`). `log edit --date D --type T
+  [--label L] --file <edit.json>` builds it through the Log panel's writer
+  with the session as it is: the logged lifts stay the ones it logged, the
+  frozen exercise list stays while the date does, and the checklist is
+  rebuilt only from `skipped` and `skipWhy` (the names from `lines`; an
+  older checklist's paired line stands for its parts). `changed` names
+  each field that moves; `unchanged` writes nothing. The type, the label
+  and Express are not edited: delete the session and add it again. A move
+  onto a day that holds the same session is refused (`already`). The day's
+  Workout habit is ticked after the write, as an add does.
+- **A delete:** `log delete --date D --type T [--label L]`. The day's
+  Workout tick stays, as the Log panel's delete leaves it.
+- **Both:** a dry run first, the change shown in one line with its date,
+  then `--write` after the yes (house rules 2 and 17). A wrong top set on
+  its own is `log fix` (above).
+
 ## Elsewhere
 
 - **`Coach/local.md`** may name another command that logs the day (a daily
   review); it uses this job's commands and session rules.
-- **Pahlavan** stays the place to tick the checklist, edit or delete a
-  session, and move a ladder by hand.
+- **Pahlavan**, when it's in the vault, does the same by hand: the
+  checklist, an edit or a delete, a ladder move.

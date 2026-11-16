@@ -465,8 +465,9 @@ key of `rules`.
 The coach's stated reasons for going outside an evidence range, beside the
 plan in `plan-data.json`: each answers one warning `engine check` gives
 (`numbers.md`, "The plan check"), by its code and, when it names one, its
-item. The check shows the warning as information with the reason; it never
-clears a hard error.
+item. The check shows the warning as information with the reason; one on an
+information finding (`same-path-twice`, `movement-twice-a-week`) shows the
+reason beside it. It never clears a hard error.
 
 ```json
 {
@@ -1042,6 +1043,81 @@ are group ids, an idea's `counts` and a light check's `id` are pattern
 line ids; reason, check and tip ids are unique. `engine validate <file>`
 says so before a write. The Food tab's words are all optional: a plan
 without them stays valid, and the tab draws what it holds.
+
+## `meals.json`
+
+`Coach/meals.json`: the meals the coach estimated (`meal.md`), written only
+through `engine meal add` and `meal delete` (`numbers.md`, "The write path:
+`meal`"). Every number in it is the coach's estimate, never measured.
+
+```json
+{
+  "schemaVersion": 1,
+  "meals": [
+    {
+      "id": "2026-11-14-1310",
+      "date": "2026-11-14",
+      "at": "13:10",
+      "name": "Lunch: chicken, rice and salad",
+      "items": [
+        { "food": "grilled chicken breast", "portion": "about 150 g (a palm and a half)" },
+        { "food": "white rice", "portion": "1 cupped hand" }
+      ],
+      "estimate": { "proteinG": 48, "kcal": 620, "fiberG": 4, "fatG": 18, "carbsG": 60 },
+      "confidence": "medium",
+      "from": "photo",
+      "note": "oil not visible: 1 tsp assumed",
+      "by": "coach"
+    }
+  ]
+}
+```
+
+- `id`: the date, then the time (`1310`) or `meal`, a counter after a
+  second meal at that time; the engine makes it when the file the coach
+  writes leaves it out, and it starts with the meal's `date`.
+- `date`: the training day (house rule 17). `at`: HH:MM, when known.
+- `name`: a short name. `items`: each food with its portion in words
+  (grams and hand portions), at least one.
+- `estimate`: `proteinG` always; `kcal`, `fiberG`, `fatG`, `carbsG` where
+  the eating-history screen allows counting (the engine refuses them where
+  the eating plan's `counting` is `"none"`). One meal's bounds: protein to
+  300 g, calories to 5,000, fiber to 150 g, fat to 400 g, carbs to 800 g.
+- `confidence`: `low`, `medium` or `high` (`meal.md`, section 4).
+- `from`: `photo` (read in the chat, never kept) or `text`.
+- `note`: what the estimate assumed. `by`: always `coach`, filled in by the
+  engine.
+
+## Waiting meals
+
+`Coach/Inbox/meals/`: the meals Pahlavan's **Log a meal** form saved for the
+coach's estimate (`meal.md`, section 0), one file each,
+`<yyyy-MM-dd>T<HH-mm-ss>-meal.json` (the moment of the save; a counter
+after it on a clash), its photo beside it with the same stem. The folder
+sits inside the inbox, where neither importer reads. Written by Pahlavan;
+the coach removes them only through `engine meal add --pending` and `meal
+discard` (`numbers.md`, "The write path: `meal`"), never by hand.
+
+```json
+{
+  "v": 1,
+  "date": "2026-11-15",
+  "at": "13:10",
+  "text": "Chicken, rice and salad; a palm of chicken, cooked in a little olive oil",
+  "photo": "2026-11-15T13-12-40-meal.jpeg",
+  "made": "2026-11-15T13:12:40"
+}
+```
+
+- `v`: 1. `date`: the day it was eaten (the form's, today by default). `at`:
+  HH:MM, when given. `made`: when the form saved it, local time.
+- `text`: the user's own words, at most 2,000 characters; `photo`: the
+  photo's file name, a JPEG (Pahlavan converts a HEIC through sips), PNG,
+  WebP or GIF. At least one of the two.
+- No numbers: the coach estimates each one and records it in `meals.json`.
+- The folder's `.gitignore` keeps the photos out of git, so on a vault two
+  Macs share a photo may be only on the Mac that saved it (`meal pending`'s
+  `photoFound`).
 
 ## `Experiments/<YYYY-MM-DD> <slug>.md`
 

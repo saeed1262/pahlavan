@@ -114,6 +114,10 @@ export const SOURCES = {
   costa2021: doi('Costa 2021', '10.1055/a-1308-3674'),
   fonseca2014: doi('Fonseca 2014', '10.1519/jsc.0000000000000539'),
   bazValle2019: doi('Baz-Valle 2019', '10.1371/journal.pone.0226989'),
+  // Grips: what a grip changes (EMG and load), not growth
+  andersen2014: url('Andersen 2014', 'https://pubmed.ncbi.nlm.nih.gov/24662157/'),
+  lusk2010: url('Lusk 2010', 'https://pubmed.ncbi.nlm.nih.gov/20543740/'),
+  lopezVivancos2023: doi('López-Vivancos 2023', '10.3390/app13085203'),
   stokes2021: doi('Stokes 2021', '10.14814/phy2.14683'),
 } as const satisfies Record<string, Source>;
 

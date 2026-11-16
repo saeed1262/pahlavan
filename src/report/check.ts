@@ -20,7 +20,7 @@ import { canonicalTags } from '../adapters/vault/muscle-tags.ts';
 import { paths } from '../adapters/vault/layout.ts';
 import type { VaultRead } from '../adapters/vault/read.ts';
 import { EFFORT_TARGETS, MAX_LOADING_RUN, REP_LIMITS, type Grade } from '../core/data/evidence.ts';
-import { CATALOGUE_BY_ID, PATTERNS, usableWith, type CatalogueEntry } from '../core/data/exercises.ts';
+import { CATALOGUE_BY_ID, GRIPS, PATTERNS, usableWith, type CatalogueEntry, type GripId } from '../core/data/exercises.ts';
 import { LOWER_BODY, MUSCLES, MUSCLE_IDS, UPPER_BODY } from '../core/data/muscles.ts';
 import { dayText } from '../core/dates.ts';
 import { readOverrides, type PlanOverride } from '../core/overrides.ts';
@@ -184,7 +184,7 @@ const isStrength = (s: SlotRef) => (s.exercise?.kind ?? 'strength') === 'strengt
 /** Adapter problems that block a write: Pahlavan would read around them, so the plan would not run as written. */
 const BLOCKING = new Set(['unknown-ladder', 'rules-invalid', 'plan-item-field', 'lift-entry', 'plan-data', 'until']);
 /** Adapter notes that are information here. */
-const INFO = new Set(['muscle-tags-overridden', 'unknown-exercise', 'snapshot-rebuilt', 'legacy-default', 'draft-plan']);
+const INFO = new Set(['muscle-tags-overridden', 'unknown-exercise', 'grip-unknown', 'snapshot-rebuilt', 'legacy-default', 'draft-plan']);
 /** The adapter's notes on single records of the log, the body record and the habits: `review` reports them; they say nothing about the plan. */
 const OTHER_FILES = new Set(['bad-value', 'unknown-field', 'bad-habit-key', 'test-not-number', 'bad-set', 'bad-sets', 'bad-lift', 'bad-unit', 'bad-rpe', 'bad-pain', 'skip-why', 'sore-muscles', 'bad-day', 'bad-session', 'missing', 'checkins-missing']);
 /** Adapter errors about the plan or the safety inputs (the profile's screen, the Ledger); the other files' do not block a plan write. */
@@ -941,6 +941,75 @@ function dislikedMovements(c: CheckContext, f: Findings): void {
   });
 }
 
+/** The pattern in words ("vertical pull"). */
+const patternWords = (p: string) => p.replace(/-/g, ' ');
+
+/**
+ * A movement's path for the repeat check: its pattern, the regions it biases
+ * and its grip (the name's, else the guide's) for a movement with grips; any
+ * other movement is its own path, so two different ones never share it.
+ */
+function pathOf(s: SlotRef & { catalogue: CatalogueEntry }): { key: string; grip: GripId | null } {
+  const e = s.catalogue;
+  const grip = (s.exercise as (Exercise & ExerciseExtras) | undefined)?._grip ?? e.grips?.default ?? null;
+  const key = e.grips ? `${e.pattern}|${[...(e.regions ?? [])].sort().join(',')}|${grip}` : `${e.id}|`;
+  return { key, grip };
+}
+
+/**
+ * Two strength movements on the same path in one session: the same pattern,
+ * the same regions and the same grip (a pull-up and a lat pulldown both
+ * overhand), or one movement twice. Information: the coach gives one of them
+ * another grip, angle or tool (a grip goes in the name, in parentheses), or
+ * an override says why both stay.
+ */
+function samePathTwice(c: CheckContext, f: Findings): void {
+  const groups = new Map<string, { type: string; names: string[]; pattern: string; grip: GripId | null }>();
+  for (const s of catalogued(c)) {
+    if (s.catalogue.load === 'cardio' || !s.catalogue.muscles.main.length) continue;
+    const p = pathOf(s);
+    const k = `${s.type}#${p.key}`;
+    const g = groups.get(k) ?? { type: s.type, names: [], pattern: s.catalogue.pattern, grip: p.grip };
+    g.names.push(s.name);
+    groups.set(k, g);
+  }
+  const out = [...groups.values()]
+    .filter((g) => g.names.length > 1)
+    .map((g) => item(`${g.type}: ${g.names.join(' and ')} (${patternWords(g.pattern)}${g.grip ? `, ${g.names.length === 2 ? 'both' : 'all'} ${GRIPS[g.grip].label.replace(/ grip$/, '')}` : ''})`, ...g.names.map((n) => `${g.type} ${n}`), ...g.names));
+  f.add('same-path-twice', 'info', 'Sessions with two movements on the same path (the same pattern, regions and grip): one can take another grip, angle or tool.', out, {
+    rule: 'choice.path-variety',
+    grade: checkGrade('same-path-twice'),
+    reason: 'A second movement on the same path adds little that a different grip, angle or tool would not, so the plan gives each repeat another one, kept for the block (planned variation, not random rotation). A grip goes in the item\'s name in parentheses ("Lat Pulldown (close neutral grip)"), which keeps the catalogue\'s muscles and starts the name\'s own history; `engine catalogue` lists each movement\'s grips. Grip changes muscle activity only a little and no study shows it changes growth: the reason is variety and a different path. An override says why both stay.',
+  });
+}
+
+/**
+ * One accessory (the same name, so the same history) on two or more days of
+ * the week. Main lifts are left out, since each strength lift is trained two
+ * or more times a week (rules.md, "Frequency for strength"), and so are
+ * ladders and timed work. Information: a different grip (a different name)
+ * or movement on one of the days answers it, or an override says why.
+ */
+function movementTwiceAWeek(c: CheckContext, f: Findings): void {
+  const by = new Map<string, { name: string; types: string[] }>();
+  for (const s of uniqueItems(c)) {
+    if (s.slot.main || s.slot.timed || s.item?.ladder || s.slot.progression?.rule === 'ladder') continue;
+    if ((s.exercise?.kind ?? 'strength') !== 'strength') continue;
+    if (s.catalogue && (s.catalogue.load === 'cardio' || !s.catalogue.muscles.main.length)) continue;
+    const g = by.get(s.slot.exercise) ?? { name: s.name, types: [] };
+    if (!g.types.includes(s.type)) g.types.push(s.type);
+    by.set(s.slot.exercise, g);
+  }
+  const out = [...by.values()]
+    .filter((g) => g.types.length > 1)
+    .map((g) => item(`${g.name}: in ${g.types.join(' and ')}`, g.name, ...g.types.map((t) => `${t} ${g.name}`)));
+  f.add('movement-twice-a-week', 'info', 'Accessories on two or more days of the week, the same each time (main lifts, ladders and timed work left out).', out, {
+    rule: 'choice.path-variety',
+    grade: checkGrade('movement-twice-a-week'),
+    reason: 'An accessory trained on two days can take another grip, angle or tool on one of them, kept for the block, for variety and a different path; a grip goes in the name in parentheses, so each keeps its own history. Main lifts repeat on purpose (each strength lift two or more times a week), so they are not listed. An override says why the same movement stays on both days (a small muscle, a movement the person likes).',
+  });
+}
+
 /**
  * Lifts whose step (`lifts[name].inc`) the gym's real weights cannot make
  * (the profile's loads): a 1 kg step on dumbbells that go 2 kg at a time, a
@@ -1060,7 +1129,7 @@ const HARD_CHECKS: readonly PlanCheck[] = [structure, contradictions, duplicateT
  * The evidence and convention checks, each a warning a stated override may
  * turn into information. Each is one PlanCheck: a new rule joins the list.
  */
-export const EVIDENCE_CHECKS: readonly PlanCheck[] = [volume, priorityRoom, regionCoverage, effort, dose, pullPush, lightWeeks, time, planRules, equipmentFit, dislikedMovements, gymSteps, loadJumps, exerciseChanges, similarToCurrent, startChange, conventions];
+export const EVIDENCE_CHECKS: readonly PlanCheck[] = [volume, priorityRoom, regionCoverage, effort, dose, pullPush, lightWeeks, time, planRules, equipmentFit, dislikedMovements, samePathTwice, movementTwiceAWeek, gymSteps, loadJumps, exerciseChanges, similarToCurrent, startChange, conventions];
 
 /** A warning from outside the plan (`CheckOptions.outside`): what it is, and its reason. */
 const OUTSIDE_MESSAGE = 'A fact about the vault, not the plan: it does not block a plan write.';
@@ -1101,8 +1170,10 @@ export function buildCheck(read: VaultRead, date: IsoDate, opts: CheckOptions = 
 /**
  * The plan's overrides on the findings: one matching a warning (its code,
  * and its item when it names one) turns the warning, or that item of it,
- * into information carrying the override. An override never applies to a
- * hard error; one that matches nothing is listed (`override-unused`).
+ * into information carrying the override; one matching an information
+ * finding (`same-path-twice`, say) puts the override on it, or on that item,
+ * so its reason shows. An override never applies to a hard error; one that
+ * matches nothing is listed (`override-unused`).
  */
 function applyOverrides(list: readonly Draft[], overrides: readonly PlanOverride[]): Draft[] {
   const out = list.map((d) => ({ ...d, items: [...d.items] }));
@@ -1125,7 +1196,14 @@ function applyOverrides(list: readonly Draft[], overrides: readonly PlanOverride
       out.push({ ...w, level: 'info', items: hit, override: o });
       continue;
     }
-    if (out.some((d) => d.code === o.code && d.level === 'info' && !d.override && (!o.item || d.items.some((x) => matches(x, o.item!))))) continue;
+    // An information finding an override answers: the matched items carry it, so its reason shows beside them.
+    const i = out.find((d) => d.code === o.code && d.level === 'info' && !d.override && (!o.item || d.items.some((x) => matches(x, o.item!))));
+    if (i) {
+      const hit = o.item ? i.items.filter((x) => matches(x, o.item!)) : i.items;
+      i.items = i.items.filter((x) => !hit.includes(x));
+      out.push({ ...i, items: hit, override: o });
+      continue;
+    }
     unused.push(item(`${label} (no ${o.code} finding${o.item ? ' with that item' : ''} on this plan)`));
   }
   const kept = out.filter((d) => d.items.length > 0);

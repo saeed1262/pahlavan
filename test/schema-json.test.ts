@@ -62,9 +62,9 @@ const schema = JSON.parse(readFileSync(join(ROOT, 'schema', 'pahlavan.v1.schema.
 const sorted = (x: readonly string[]) => [...x].sort();
 
 describe('JSON Schema', () => {
-  it('parses as draft 2020-12 with the eleven documents and the phone\'s entry at the root', () => {
+  it('parses as draft 2020-12 with the twelve documents, a waiting meal and the phone\'s entry at the root', () => {
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
-    assert.deepEqual(schema.anyOf.map((r) => r.$ref), ['profile', 'program', 'log', 'checkins', 'body', 'ledger', 'checkinLog', 'tracking', 'nudges', 'sittingLog', 'eatingPlan', 'inboxEntry'].map((n) => `#/$defs/${n}`));
+    assert.deepEqual(schema.anyOf.map((r) => r.$ref), ['profile', 'program', 'log', 'checkins', 'body', 'ledger', 'checkinLog', 'tracking', 'nudges', 'sittingLog', 'eatingPlan', 'meals', 'pendingMeal', 'inboxEntry'].map((n) => `#/$defs/${n}`));
     assert.equal(schema.$defs['schemaVersion']!.const, SCHEMA_VERSION);
   });
 

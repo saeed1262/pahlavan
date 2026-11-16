@@ -667,3 +667,65 @@ describe('plan-write: the key-level diff', () => {
     assert.ok(!sameJson({ a: [1, 2] }, { a: [2, 1] }));
   });
 });
+
+describe('check: repeats take a different path', () => {
+  const add = (p: Json, type: string, ...names: string[]) => {
+    for (const name of names) p.sessions[type].push({ name, sr: '3 × 10–12', rest: '90 s' });
+  };
+
+  it('the fixture has neither: Face Pull and Band External Rotation share a pattern but not a path', () => {
+    const r = check();
+    assert.equal(find(r, 'same-path-twice'), undefined);
+    assert.equal(find(r, 'movement-twice-a-week'), undefined);
+  });
+
+  it('same-path-twice: a pull-up and a lat pulldown both overhand in one session, with its rule and grade', () => {
+    const f = find(check((p) => add(p, 'B', 'Pull-up', 'Lat Pulldown')), 'same-path-twice', 'info')!;
+    assert.deepEqual(f.items, ['B: Pull-up and Lat Pulldown (vertical pull, both overhand)']);
+    assert.equal(f.rule, 'choice.path-variety');
+    assert.equal(f.grade, 'weak');
+    assert.match(f.reason ?? '', /in parentheses \("Lat Pulldown \(close neutral grip\)"\)/);
+  });
+
+  it('another grip in the name answers it; so does another angle (an incline press biases the upper chest)', () => {
+    assert.equal(find(check((p) => add(p, 'B', 'Pull-up', 'Lat Pulldown (close neutral grip)')), 'same-path-twice'), undefined);
+    assert.equal(find(check((p) => add(p, 'B', 'Lat Pulldown', 'Lat Pulldown (underhand grip)')), 'same-path-twice'), undefined, 'one movement, two grips');
+    assert.equal(find(check((p) => add(p, 'A', 'Incline DB Press')), 'same-path-twice'), undefined, 'flat and incline: other regions');
+  });
+
+  it('one movement twice in a session, by another of its names', () => {
+    const f = find(check((p) => add(p, 'B', 'Cable Row')), 'same-path-twice', 'info')!;
+    assert.deepEqual(f.items, ['B: Seated Cable Row and Cable Row (horizontal pull, both close neutral)']);
+  });
+
+  it('movement-twice-a-week: an accessory on two days; a grip in the name on one of them answers it', () => {
+    const f = find(check((p) => add(p, 'B', 'Face Pull')), 'movement-twice-a-week', 'info')!;
+    assert.deepEqual(f.items, ['Face Pull: in A and B']);
+    assert.equal(f.rule, 'choice.path-variety');
+    assert.equal(f.grade, 'weak');
+    const both = check((p) => {
+      add(p, 'A', 'Lat Pulldown');
+      add(p, 'B', 'Lat Pulldown (close neutral grip)');
+    });
+    assert.equal(find(both, 'movement-twice-a-week'), undefined);
+  });
+
+  it('main lifts, ladders and timed work are left out', () => {
+    const r = check((p) => {
+      p.sessions.B.push({ name: 'Goblet Squat', sr: '3 × 8–10', logged: true });
+      add(p, 'B', 'Zone 2 finisher');
+    });
+    assert.equal(find(r, 'movement-twice-a-week'), undefined);
+  });
+
+  it('an override answers an information finding: the reason shows on it, and it is not listed as unused', () => {
+    const r = check((p) => {
+      add(p, 'B', 'Face Pull');
+      p.overrides = [{ code: 'movement-twice-a-week', item: 'Face Pull', reason: 'A small muscle, trained twice for the posture work.' }];
+    });
+    const f = find(r, 'movement-twice-a-week', 'info')!;
+    assert.deepEqual(f.override, { code: 'movement-twice-a-week', item: 'Face Pull', reason: 'A small muscle, trained twice for the posture work.' });
+    assert.deepEqual(f.items, ['Face Pull: in A and B']);
+    assert.equal(find(r, 'override-unused'), undefined);
+  });
+});

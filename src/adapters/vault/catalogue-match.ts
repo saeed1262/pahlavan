@@ -4,7 +4,7 @@
 // id, one of its aliases (data/exercises.ts) or a synonym below. No match is a
 // warning, never a guess.
 
-import { CATALOGUE, CATALOGUE_BY_ID, type CatalogueEntry } from '../../core/data/exercises.ts';
+import { CATALOGUE, CATALOGUE_BY_ID, GRIPS, type CatalogueEntry, type GripHand, type GripId, type GripWidth } from '../../core/data/exercises.ts';
 
 /** Lowercase words, "db" read as dumbbell, punctuation and degrees dropped. */
 export function normalizeName(name: string): string {
@@ -140,4 +140,40 @@ export function matchCatalogue(name: string): CatalogueEntry | null {
   const synonym = NAME_SYNONYMS[n];
   if (synonym) return CATALOGUE_BY_ID.get(synonym) ?? null;
   return BY_NAME.get(n) ?? null;
+}
+
+/** The words a name gives a grip by: the hands' turn, then their width. */
+const HAND_WORDS: readonly [RegExp, GripHand][] = [
+  [/\b(overhand|pronated|palms? (down|away))\b/, 'overhand'],
+  [/\b(underhand|supinated|palms? (up|toward|towards))\b/, 'underhand'],
+  [/\b(neutral|hammer|palms? facing)\b/, 'neutral'],
+];
+const WIDTH_WORDS: readonly [RegExp, Exclude<GripWidth, null>][] = [
+  [/\b(close|narrow)\b/, 'close'],
+  [/\bwide\b/, 'wide'],
+];
+
+/**
+ * The grip a plan item's name gives a movement with grips: parenthesised text
+ * that names one ("Lat Pulldown (close neutral grip)"), a missing turn read
+ * as the movement's own ("(close grip)" on a bench is close overhand), else
+ * the grip its guide describes. Text that names a grip the movement doesn't
+ * list comes back as `unknown` (the movement's own grip stands). A movement
+ * with no grips has none.
+ */
+export function gripOf(name: string, entry: Pick<CatalogueEntry, 'grips'> | null): { grip: GripId | null; unknown?: string } {
+  const grips = entry?.grips;
+  if (!grips) return { grip: null };
+  const allowed: GripId[] = [grips.default, ...grips.options.map((o) => o.grip)];
+  for (const m of name.matchAll(/\(([^)]*)\)/g)) {
+    const text = m[1]!.trim();
+    const t = text.toLowerCase().replace(/[-_]/g, ' ');
+    const hand = HAND_WORDS.find(([re]) => re.test(t))?.[1];
+    const width = WIDTH_WORDS.find(([re]) => re.test(t))?.[1] ?? null;
+    if (!hand && !width && !/\bgrip\b/.test(t)) continue;
+    const want = hand ?? GRIPS[grips.default].hand;
+    const hit = allowed.find((g) => GRIPS[g].hand === want && GRIPS[g].width === width);
+    return hit ? { grip: hit } : { grip: grips.default, unknown: text };
+  }
+  return { grip: grips.default };
 }

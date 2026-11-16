@@ -120,6 +120,35 @@ export const MOVEMENT_USES = {
 } as const;
 export type MovementUse = keyof typeof MOVEMENT_USES;
 
+/**
+ * The grips a movement can take where the grip changes its path: the hands'
+ * turn (palms down, up or facing each other) and, for some, their width. A
+ * plan item names one in its name, in parentheses ("Lat Pulldown (close
+ * neutral grip)"): the catalogue's muscles, pattern and abdominal-strain tag
+ * still count, and the name keeps its own history, since the loads differ by
+ * grip. Grip changes activity between muscles a little (EMG studies) and no
+ * study shows it changes growth: a different grip is for variety and a
+ * different path (the evidence library's `choice.path-variety`).
+ */
+export const GRIPS = {
+  overhand: { hand: 'overhand', width: null, label: 'overhand grip', text: 'palms down or away' },
+  'wide-overhand': { hand: 'overhand', width: 'wide', label: 'wide overhand grip', text: 'palms down, hands wider than the shoulders' },
+  'close-overhand': { hand: 'overhand', width: 'close', label: 'close overhand grip', text: 'palms down, hands about shoulder width' },
+  underhand: { hand: 'underhand', width: null, label: 'underhand grip', text: 'palms up or toward you' },
+  neutral: { hand: 'neutral', width: null, label: 'neutral grip', text: 'palms facing each other' },
+  'close-neutral': { hand: 'neutral', width: 'close', label: 'close neutral grip', text: 'palms facing, hands close (a V-handle)' },
+} as const;
+export type GripId = keyof typeof GRIPS;
+export type GripHand = (typeof GRIPS)[GripId]['hand'];
+export type GripWidth = (typeof GRIPS)[GripId]['width'];
+export const GRIP_IDS = Object.keys(GRIPS) as GripId[];
+
+/** A movement's grips: the one its guide describes, and the others it can take, each with its own setup line. */
+export interface MovementGrips {
+  default: GripId;
+  options: { grip: GripId; setup: string }[];
+}
+
 /** A movement's guide text: the setup, the movement, the mistake to avoid (a plan's guide entry has the same three). */
 export interface MovementGuide {
   setup: string;
@@ -166,6 +195,8 @@ export interface CatalogueEntry {
    */
   hotel: boolean;
   guide: MovementGuide;
+  /** The grips it can take where the grip changes the path (GRIPS); left out for the rest. */
+  grips?: MovementGrips;
 }
 
 type Opts = {
@@ -182,6 +213,8 @@ type Opts = {
   hotel?: boolean;
   /** The setup, the movement, the mistake to avoid. */
   guide: [string, string, string];
+  /** The grip the guide describes, then each other grip with its setup line. */
+  grips?: [GripId, [GripId, string][]];
 };
 
 function x(id: string, name: string, pattern: Pattern, equipment: Equipment[], main: string[], helps: string[], iap: IapTag, level: Level, o: Opts): CatalogueEntry {
@@ -206,6 +239,7 @@ function x(id: string, name: string, pattern: Pattern, equipment: Equipment[], m
     uses: o.uses ?? [],
     hotel: o.hotel ?? false,
     guide: { setup, do: doIt, avoid },
+    ...(o.grips ? { grips: { default: o.grips[0], options: o.grips[1].map(([grip, setup]) => ({ grip, setup })) } } : {}),
   };
 }
 
@@ -578,21 +612,25 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     easier: ['push-up', 'db-floor-press', 'incline-db-press', 'machine-chest-press'], harder: ['bench-press'], regions: ['shoulders-front'],
     aliases: ['dumbbell bench press', 'dumbbell chest press'], alsoWith: ['kettlebell'], risk: ['demand:supine'],
     guide: ['Lie on the bench, feet planted, shoulder blades pulled together.', 'Lower to the sides of the chest, then press up and slightly in.', 'Bouncing the weights off the chest, or the shoulders rolling forward.'],
+    grips: ['overhand', [['neutral', 'Lie on the bench, feet planted, shoulder blades pulled together, palms facing each other, so the elbows stay closer to the sides.']]],
   }),
   x('incline-db-press', 'Incline dumbbell press', 'horizontal-push', ['dumbbell', 'bench'], ['chest', 'shoulders'], ['triceps'], 'low', 'beginner', {
     easier: ['incline-push-up'], harder: ['db-bench', 'incline-bench-press'], regions: ['chest-upper', 'shoulders-front'],
     aliases: ['incline dumbbell bench press'],
     guide: ['Bench at a low incline, wrists stacked over the elbows.', 'Lower toward the upper chest, then press up.', 'Setting the bench so steep it becomes a shoulder press.'],
+    grips: ['overhand', [['neutral', 'Bench at a low incline, wrists stacked over the elbows, palms facing each other.']]],
   }),
   x('bench-press', 'Barbell bench press', 'horizontal-push', ['barbell', 'bench'], ['chest'], ['triceps', 'shoulders'], 'moderate', 'beginner', {
     easier: ['db-bench', 'machine-chest-press'], regions: ['shoulders-front'],
     aliases: ['flat bench press', 'barbell bench'], risk: ['demand:supine'],
     guide: ['Eyes under the bar, feet planted; use a spotter or safety arms.', 'Lower to the lower chest with control, then press up.', 'Bouncing the bar off the chest, or the hips lifting.'],
+    grips: ['overhand', [['close-overhand', 'Eyes under the bar, feet planted, hands about shoulder width, elbows close to the sides; use a spotter or safety arms.']]],
   }),
   x('machine-chest-press', 'Machine chest press', 'horizontal-push', ['machine'], ['chest'], ['triceps', 'shoulders'], 'low', 'beginner', {
     easier: ['pec-deck'], harder: ['db-bench', 'bench-press'], regions: ['shoulders-front'],
     aliases: ['chest press', 'seated chest press'],
     guide: ['Seat set so the handles start at mid-chest height.', 'Press without the shoulders rolling forward, then return slowly.', 'Letting the stack crash between reps.'],
+    grips: ['overhand', [['neutral', 'Seat set so the handles start at mid-chest height, hands on the upright handles where the machine has them, palms facing.']]],
   }),
   x('wall-push-up', 'Wall push-up', 'horizontal-push', ['bodyweight'], ['chest'], ['triceps', 'shoulders'], 'low', 'beginner', {
     load: BW, harder: ['incline-push-up'], regions: ['shoulders-front'],
@@ -701,21 +739,25 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     harder: ['db-row', 'bent-over-db-row'], regions: ['upper-back-mid'],
     aliases: ['incline dumbbell row', 'chest supported row'],
     guide: ['Chest on an incline bench, weights hanging.', 'Row both weights up together and pause with the shoulder blades squeezed.', 'Lifting the chest off the pad to heave the weights.'],
+    grips: ['neutral', [['overhand', 'Chest on an incline bench, weights hanging, palms facing your feet, so the elbows travel out wide.']]],
   }),
   x('barbell-row', 'Barbell row', 'horizontal-pull', ['barbell'], ['lats', 'upper-back'], ['biceps', 'lower-back', 'forearms'], 'moderate', 'intermediate', {
     easier: ['db-row', 'seated-cable-row', 'bent-over-db-row'], regions: ['upper-back-mid'],
     aliases: ['bent over row', 'barbell bent over row'], risk: ['joint:grip-heavy', 'joint:back-bent-over'],
     guide: ['Hinge to about 45 degrees and hold it, bar hanging at arm\'s length.', 'Pull the bar to the lower ribs, then lower with control.', 'Heaving with the hips, or standing up as you pull.'],
+    grips: ['overhand', [['underhand', 'Hinge to about 45 degrees and hold it, palms up, hands about shoulder width, elbows close to the sides.']]],
   }),
   x('seated-cable-row', 'Seated cable row', 'horizontal-pull', ['cable'], ['lats', 'upper-back'], ['biceps', 'forearms'], 'low', 'beginner', {
     easier: ['machine-row'], harder: ['barbell-row'], regions: ['upper-back-mid'],
     aliases: ['cable row', 'low row'],
     guide: ['Sit tall, slight knee bend.', 'Pull the handle to the belly, then let the shoulders reach forward on the return.', 'Rocking the torso back and forth.'],
+    grips: ['close-neutral', [['wide-overhand', 'Sit tall, slight knee bend, a long bar held wider than the shoulders, palms down, so the elbows travel out to the sides.']]],
   }),
   x('machine-row', 'Machine row', 'horizontal-pull', ['machine'], ['upper-back', 'lats'], ['biceps', 'forearms'], 'low', 'beginner', {
     harder: ['seated-cable-row'], regions: ['upper-back-mid'],
     aliases: ['seated machine row'],
     guide: ['Chest on the pad, seat set so the handles are at chest height.', 'Pull the elbows back, then return slowly.', 'Letting the weight yank the arms forward.'],
+    grips: ['neutral', [['overhand', 'Chest on the pad, seat set so the handles are at chest height, hands on the horizontal handles, palms down, elbows out.']]],
   }),
   x('doorframe-row', 'Door frame row (holding a solid frame)', 'horizontal-pull', ['bodyweight'], ['upper-back', 'lats'], ['biceps', 'forearms'], 'low', 'beginner', {
     uni: true, load: BW, harder: ['inverted-row', 'band-row'], regions: ['upper-back-mid'],
@@ -751,6 +793,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     easier: ['landmine-press', 'machine-shoulder-press'], harder: ['overhead-press'], regions: ['shoulders-front', 'shoulders-side'],
     aliases: ['seated dumbbell press'], alsoWith: ['kettlebell'], risk: ['joint:shoulder-overhead'],
     guide: ['Back supported on an upright bench, weights at the shoulders.', 'Press up without the ribs flaring, then lower to about ear height.', 'Arching the back to finish the press.'],
+    grips: ['overhand', [['neutral', 'Back supported on an upright bench, weights at the shoulders, palms facing each other, elbows a little forward.']]],
   }),
   x('overhead-press', 'Standing barbell press', 'vertical-push', ['barbell'], ['shoulders'], ['triceps', 'upper-back', 'abs'], 'high', 'beginner', {
     easier: ['db-shoulder-press', 'landmine-press', 'standing-db-press'], regions: ['shoulders-front', 'shoulders-side'],
@@ -771,6 +814,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     easier: ['landmine-press', 'band-overhead-press'], harder: ['overhead-press'], regions: ['shoulders-front', 'shoulders-side'],
     aliases: ['dumbbell overhead press'], risk: ['joint:shoulder-overhead'], hotel: true,
     guide: ['Stand tall, weights at the shoulders, glutes squeezed and ribs down.', 'Press up and slightly back over the head, then lower to the shoulders under control.', 'Leaning back to push the weights up.'],
+    grips: ['overhand', [['neutral', 'Stand tall, weights at the shoulders, palms facing each other, glutes squeezed and ribs down.']]],
   }),
   x('kb-press', 'Single-arm kettlebell press', 'vertical-push', ['kettlebell'], ['shoulders'], ['triceps', 'obliques'], 'moderate', 'intermediate', {
     uni: true, easier: ['landmine-press'], regions: ['shoulders-front', 'shoulders-side'],
@@ -807,6 +851,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     easier: ['band-pulldown', 'straight-arm-pulldown'], harder: ['assisted-pull-up', 'pull-up', 'assisted-pull-up-machine'],
     aliases: ['lat pull down', 'wide grip pulldown', 'cable pulldown'], risk: ['joint:shoulder-overhead'],
     guide: ['Thighs locked under the pad, grip a little wider than the shoulders.', 'Pull the bar to the upper chest, chest up, then let it rise with control.', 'Leaning far back, or pulling the bar behind the neck.'],
+    grips: ['overhand', [['close-neutral', 'Thighs locked under the pad, a close neutral handle (a V-handle or parallel grips), palms facing.'], ['underhand', 'Thighs locked under the pad, palms toward you, hands about shoulder width.']]],
   }),
   x('dead-hang', 'Dead hang', 'vertical-pull', ['pull-up-bar'], ['forearms'], ['lats', 'upper-back'], 'low', 'beginner', {
     load: 'timed', harder: ['scapular-pull-up', 'skin-the-cat'],
@@ -832,6 +877,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     load: BW, easier: ['negative-pull-up', 'assisted-pull-up', 'chin-up', 'ring-row', 'lat-pulldown', 'assisted-pull-up-machine'], harder: ['weighted-pull-up', 'chest-to-bar-pull-up', 'tuck-front-lever', 'l-sit-pull-up'],
     aliases: ['overhand pull up'], risk: ['joint:shoulder-overhead', 'joint:shoulder-hang', 'joint:grip-heavy'],
     guide: ['Grip a little wider than the shoulders, hanging from straight arms, shoulders down.', 'Pull until the chin clears the bar, then lower to straight arms.', 'Kicking or swinging to get the chin over.'],
+    grips: ['overhand', [['neutral', 'Hands on parallel handles, palms facing, hanging from straight arms, shoulders down.']]],
   }),
   x('flexed-arm-hang', 'Flexed-arm hang (chin over the bar)', 'vertical-pull', ['pull-up-bar'], ['lats'], ['biceps', 'upper-back', 'forearms'], 'low', 'beginner', {
     load: 'timed', easier: ['scapular-pull-up'], harder: ['negative-pull-up'],
@@ -868,6 +914,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     load: BW, easier: ['lat-pulldown'], harder: ['pull-up'],
     aliases: ['gravitron'], risk: ['joint:shoulder-overhead', 'joint:shoulder-hang'],
     guide: ['Set the counterweight; more makes it easier.', 'Pull the elbows down to the ribs, then lower all the way to straight arms.', 'Cutting the range short at the bottom.'],
+    grips: ['overhand', [['neutral', 'Set the counterweight (more makes it easier), hands on the parallel handles, palms facing.'], ['underhand', 'Set the counterweight (more makes it easier), palms toward you, hands about shoulder width.']]],
   }),
 
   // carry
@@ -1094,6 +1141,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     easier: ['db-curl'],
     aliases: ['incline curl'],
     guide: ['Bench at about 45 degrees, arms hanging behind the body, light weights.', 'Curl without bringing the elbows forward, then lower to a full stretch.', 'Going heavy enough that the elbows swing forward.'],
+    grips: ['underhand', [['neutral', 'Bench at about 45 degrees, arms hanging behind the body, light weights, palms facing each other (an incline hammer curl).']]],
   }),
   x('cable-pushdown', 'Cable triceps pushdown', 'triceps', ['cable'], ['triceps'], [], 'low', 'beginner', {
     easier: ['overhead-db-extension'], harder: ['cable-overhead-triceps-extension'],

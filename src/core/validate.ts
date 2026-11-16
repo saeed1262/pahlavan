@@ -13,6 +13,10 @@ import { LB_PER_KG } from './units.ts';
 import {
   INBOX_KINDS,
   INBOX_VERSION,
+  MEAL_SOURCES,
+  PENDING_MEAL_VERSION,
+  type MealsFile,
+  type PendingMeal,
   TRAINED_ANSWERS,
   type InboxKind,
   type InboxMorningFields,
@@ -805,6 +809,74 @@ const eatingPlanShape = shape(
     tips: arr(coachTip),
   },
 );
+
+// ---------------------------------------------------------------- meals (Coach/meals.json)
+
+/** A meal's id: its date, then its time (1310) or a counter, letters, digits and dashes. */
+export const MEAL_ID = /^\d{4}-\d{2}-\d{2}-[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/** The estimate's bounds: one meal, so anything past them is a typing slip, never a meal. */
+export const MEAL_LIMITS = { proteinG: 300, kcal: 5000, fiberG: 150, fatG: 400, carbsG: 800 } as const;
+
+const mealItem = shape('mealItem', { food: text, portion: text });
+const mealEstimate = shape(
+  'mealEstimate',
+  { proteinG: num({ min: 0, max: MEAL_LIMITS.proteinG }) },
+  { kcal: num({ min: 0, max: MEAL_LIMITS.kcal }), fiberG: num({ min: 0, max: MEAL_LIMITS.fiberG }), fatG: num({ min: 0, max: MEAL_LIMITS.fatG }), carbsG: num({ min: 0, max: MEAL_LIMITS.carbsG }) },
+);
+const mealShape = shape(
+  'meal',
+  { id: str({ pattern: MEAL_ID }), date, name: text, items: arr(mealItem, { min: 1 }), estimate: mealEstimate, confidence: oneOf(CONFIDENCE), from: oneOf(MEAL_SOURCES), by: oneOf(['coach']) },
+  { at: clock, note: str() },
+);
+const mealsShape = shape('meals', { schemaVersion: version, meals: arr(mealShape) });
+
+/** Coach/meals.json: every meal well formed, each id unique and starting with its own date. */
+export function validateMeals(value: unknown): ValidationError[] {
+  return run(mealsShape, value, (errors) => {
+    const m = value as MealsFile;
+    for (const d of duplicates(m.meals.map((x) => x.id))) fail(errors, 'meals', `duplicate meal id: ${d}`);
+    m.meals.forEach((x, i) => {
+      if (!x.id.startsWith(`${x.date}-`)) fail(errors, `meals[${i}].id`, `does not start with its date (${x.date})`);
+    });
+  });
+}
+
+// ---------------------------------------------------------------- a meal waiting for the coach (Coach/Inbox/meals/*.json)
+
+/** A waiting meal's file: its id (the moment the form saved it, a counter on a clash), then -meal.json. */
+export const PENDING_MEAL_FILE = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d+)?)-meal\.json$/;
+/** Its photo beside it: the same stem, as an image the coach can read (a HEIC is converted or refused before it gets here). */
+export const PENDING_MEAL_PHOTO = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d+)?)-meal\.(jpeg|jpg|png|webp|gif)$/;
+/** The longest description the form takes. */
+export const PENDING_TEXT_MAX = 2000;
+
+const pendingVersion: Check = (v, p, e) => {
+  if (v !== PENDING_MEAL_VERSION) fail(e, p, `expected version ${PENDING_MEAL_VERSION}, found ${JSON.stringify(v ?? null)}`);
+};
+const pendingText: Check = (v, p, e) => {
+  if (typeof v !== 'string') return fail(e, p, 'expected a string');
+  if (v.trim() === '') return fail(e, p, 'must not be empty (leave it out instead)');
+  if (v.length > PENDING_TEXT_MAX) fail(e, p, `is ${v.length} characters: at most ${PENDING_TEXT_MAX}`);
+};
+const madeAt = then(str({ pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/ }), (v, p, e) => {
+  if (!isIsoDate((v as string).slice(0, 10))) fail(e, p, 'is not a real moment');
+});
+const pendingShape = shape('pendingMeal', { v: pendingVersion, date, made: madeAt }, { at: clock, text: pendingText, photo: str({ pattern: PENDING_MEAL_PHOTO }) });
+
+/**
+ * A waiting meal: well formed, with words or a photo (or both), and, given
+ * its file name, a photo named with the file's own stem.
+ */
+export function validatePendingMeal(value: unknown, file?: string): ValidationError[] {
+  return run(pendingShape, value, (errors) => {
+    const m = value as PendingMeal;
+    if (m.text === undefined && m.photo === undefined) fail(errors, '(root)', 'holds neither text nor a photo: a waiting meal needs one of them');
+    const stem = file ? PENDING_MEAL_FILE.exec(file)?.[1] : undefined;
+    if (file && !stem) fail(errors, '(root)', `the file name ${file} is not <yyyy-MM-dd>T<HH-mm-ss>-meal.json`);
+    if (stem && m.photo !== undefined && PENDING_MEAL_PHOTO.exec(m.photo)?.[1] !== stem) fail(errors, 'photo', `is not named after its file (${stem}-meal.<ext>)`);
+  });
+}
 
 // ---------------------------------------------------------------- the phone's inbox (Coach/Inbox/*.json)
 

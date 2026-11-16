@@ -760,6 +760,26 @@ print("a weekly sets count")
     }
   });
 
+  it('in a plain folder with no .obsidian (the coach without Obsidian), the docs still agree with the engine', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pahlavan-plain-'));
+    try {
+      cpSync(VAULT, folder, { recursive: true });
+      rmSync(join(folder, '.obsidian'), { recursive: true, force: true });
+      const skill = join(folder, '.claude', 'skills', 'fitness-coach');
+      cpSync(join(ROOT, 'skill'), skill, { recursive: true });
+      cpSync(builtEngine(), join(skill, 'scripts', 'engine.cjs'));
+      writeFileSync(join(skill, 'scripts', 'VERSION'), `engine ${ENGINE_VERSION}\nschema ${SCHEMA_VERSION}\n`);
+      assert.equal((JSON.parse(engine(['folders', '--vault', folder, '--json']).stdout) as Json)['pahlavan'], false);
+      const r = spawnSync(process.execPath, [join(skill, 'scripts', 'selfcheck.mjs'), '--vault', folder, '--repo', ROOT, '--json'], { encoding: 'utf8', cwd: folder });
+      const out = JSON.parse(r.stdout) as { results: { check: number; status: string; what: string; reason: string }[] };
+      assert.equal(r.status, 0, JSON.stringify(out.results.filter((x) => x.status === 'fail')));
+      // The new commands ran as dry runs: a session read and edited, an item paused.
+      for (const re of [/^engine\.cjs log show /, /^engine\.cjs log edit /, /^engine\.cjs log delete /]) assert.ok(out.results.some((x) => x.check === 1 && x.status === 'pass' && re.test(x.what)), String(re));
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
   it('on a vault with no plan yet, runs the draft commands on the made-up sample plan the skill ships', () => {
     const vault = mkdtempSync(join(tmpdir(), 'pahlavan-fresh-'));
     try {

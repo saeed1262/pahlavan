@@ -15,7 +15,7 @@ node .claude/skills/fitness-coach/scripts/engine.cjs draft     --vault . --json
 node .claude/skills/fitness-coach/scripts/engine.cjs overlap   --json --plans <a.json,b.json> [--vault .]
 node .claude/skills/fitness-coach/scripts/engine.cjs evidence  --json [--topic volume|effort|load|rest|tempo|order|range-of-motion|exercise-choice|progression|light-weeks|readiness|calibration|concurrent|activity|regions|findings|standing-rules]
 node .claude/skills/fitness-coach/scripts/engine.cjs catalogue --json [--pattern <pattern>] [--region <region>] [--muscle <muscle>] [--equipment <e1,e2>] [--level beginner|intermediate|advanced] [--query <text>] [--vault .] [--md]
-node .claude/skills/fitness-coach/scripts/engine.cjs validate  <file> --json [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|inbox|letter]
+node .claude/skills/fitness-coach/scripts/engine.cjs validate  <file> --json [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|meals|pending-meal|inbox|letter]
 node .claude/skills/fitness-coach/scripts/engine.cjs checkin template --vault . --json [--date D] [--time HH:MM]
 node .claude/skills/fitness-coach/scripts/engine.cjs checkin add --vault . --json --file <answers.json> [--write]
 node .claude/skills/fitness-coach/scripts/engine.cjs tracked   --vault . --json [--date D]
@@ -29,10 +29,19 @@ node .claude/skills/fitness-coach/scripts/engine.cjs body      --vault . --json 
 node .claude/skills/fitness-coach/scripts/engine.cjs log add   --vault . --json --file <session.json> [--no-habit] [--write]
 node .claude/skills/fitness-coach/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D [--write]
 node .claude/skills/fitness-coach/scripts/engine.cjs log fix   --vault . --json --date D --type T --lift lift1|lift2 [--label L] [--weight W] [--reps R] [--clear-planned] [--write]
+node .claude/skills/fitness-coach/scripts/engine.cjs log show  --vault . --json --date D --type T [--label L]
+node .claude/skills/fitness-coach/scripts/engine.cjs log edit  --vault . --json --date D --type T [--label L] --file <edit.json> [--no-habit] [--write]
+node .claude/skills/fitness-coach/scripts/engine.cjs log delete --vault . --json --date D --type T [--label L] [--write]
 node .claude/skills/fitness-coach/scripts/engine.cjs baseline  --vault . --json --date D
 node .claude/skills/fitness-coach/scripts/engine.cjs food      --vault . --json [--date D]
 node .claude/skills/fitness-coach/scripts/engine.cjs energy    --vault . --json --pal N [--rate R] [--meals N] [--date D]
 node .claude/skills/fitness-coach/scripts/engine.cjs eating    --vault . --json --file <plan.json> [--replace] [--write]
+node .claude/skills/fitness-coach/scripts/engine.cjs meal add  --vault . --json --file <meal.json> [--pending <id>] [--write]
+node .claude/skills/fitness-coach/scripts/engine.cjs meal pending --vault . --json
+node .claude/skills/fitness-coach/scripts/engine.cjs meal discard --vault . --json --pending <id> [--write]
+node .claude/skills/fitness-coach/scripts/engine.cjs meal show --vault . --json [--date D]
+node .claude/skills/fitness-coach/scripts/engine.cjs meal show --vault . --json --from D --to D
+node .claude/skills/fitness-coach/scripts/engine.cjs meal delete --vault . --json --id <meal id> [--write]
 node .claude/skills/fitness-coach/scripts/engine.cjs inbox     --vault . --json [--write] [--phone]
 node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
 ```
@@ -44,15 +53,20 @@ node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
   rule 22). `evidence` is asked by topic (`evidence --json --topic volume`);
   the whole library only when a design truly needs it.
 - **It only reads,** except these writes, each a dry run until `--write`
-  (after the user's yes): `log add`, `log ladder` and `log fix --write`
-  write `fitness-log-data.json` (`log.md`; `log add` also the day's Workout
-  tick in the habit check-ins), `checkin add --write` writes `Coach/checkins.json`
+  (after the user's yes): `log add`, `log ladder`, `log fix`, `log edit`
+  and `log delete --write` write `fitness-log-data.json` (`log.md`; `log
+  add` and `log edit` also the day's Workout tick in the habit check-ins), `checkin add --write` writes `Coach/checkins.json`
   (`checkin.md`), `track ... --write` writes `Coach/tracking.json`
   (`tracking.md`; `track tick --write` also the linked habit in the habit
   check-ins file), `body --write` writes `body-data.json` (one
   date's morning fields, tape and tests; "The write path: `body`" below),
   `eating --write` writes `Coach/eating-plan.json` (the eating plan as
-  data; "The eating plan" below), and `inbox --write` applies the phone's
+  data; "The eating plan" below), `meal add` and `meal delete --write`
+  write `Coach/meals.json` (the coach's meal estimates; `meal add` also the
+  Protein item's tick and its linked habit, and with `--pending` removes
+  the waiting meal it records; "The write path: `meal`" below), `meal
+  discard --write` removes a waiting meal's files from
+  `Coach/Inbox/meals/`, and `inbox --write` applies the phone's
   entries through the same merges and moves them ("The phone's inbox"
   below), and `plan-write --write` writes `plan-data.json` (the whole file,
   once the plan check finds no hard error; "The plan check" below), each
@@ -133,7 +147,9 @@ node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
 
 | Question | Command | Fields |
 |---|---|---|
-| Where the vault keeps the files (the fitness folder, the habit check-ins) | `folders` | `folders`, `source` (`settings`, `found`, `default`), `paths` (every file's path) |
+| Where the vault keeps the files (the fitness folder, the habit check-ins); whether Pahlavan is in it | `folders` | `folders`, `source` (`settings`, `found`, `default`), `pahlavan` (its files in the plugins folder: false means the coach works in chat), `paths` (every file's path) |
+| A logged session as `log edit` takes it, with its checklist's line names | `log show --date D --type T` | `session`, `input`, `lines` |
+| Change a logged session's fields, or take it out | `log edit --date D --type T --file <f>`, `log delete --date D --type T` (then `--write`) | `result`, `changed`, `session`, `written` |
 | The week's numbers (the check-in, the letter) | `review --date <Sunday>` | all of the below |
 | Next week's lift targets ("what should I lift next week") | `review --date <the Monday after>` | `lifts[].next`, `week.deload`, `temporaryChanges.due` |
 | Sessions against target, 4 weeks | `review` | `adherence` |
@@ -173,7 +189,7 @@ node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
 | Sitting time against its limits, 4 weeks | `habits --item <sitting id>` | `items[].sitting` |
 | Stand-up minutes (with the desk's share) or desk breaks done, a day for 4 weeks, against the day's target | `habits --item <stand-ups or desk-breaks id>` | `items[].bars` |
 | What is due now and today | `due [--time HH:MM]` | `due.value.cards`, `today.value`, `quiet` |
-| Add, accept or decline a tracked item; the morning card; the body record's schedule | `track <action>` (then `--write`) | `results`, `after`, `handOver`, `written` |
+| Add, accept or decline a tracked item; pause, resume or remove one; the morning card; the body record's schedule | `track <action>` (then `--write`) | `results`, `after`, `handOver`, `written` |
 | One day's items, what is still open, the session and the morning (the daily wrap-up) | `track day --date D` | `items`, `open`, `notDue`, `training`, `morning` |
 | Tick the day's supplements and ticks, or set an amount (the daily wrap-up) | `track tick --id <ids> --date D` (then `--write`) | `results`, `habitChanges`, `after`, `written` |
 | Record measurements in the body log (the intake's weight, waist and tests, as the cycle's first entries) | `body --file <f>` (then `--write`) | `results`, `after`, `written` |
@@ -183,6 +199,10 @@ node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
 | The Food tab's plan in words, the day's timeline, the light checks | `food [--date D]` | `words`, `day`, `checks` |
 | Is the adjustment rule due, and what does it say (a review date, a tape day) | `food --date D` | `adjust` (its note is the sentence to quote) |
 | Save the eating plan as data, or a change to it | `eating --file <f>` (then `--write`) | `result`, `changed`, `plan`, `written` |
+| Record a meal the coach estimated, with the day added up and the Protein tick it leaves (the meal job) | `meal add --file <f>` (then `--write`) | `result`, `meal`, `day`, `protein`, `written` |
+| A day's meals, or a week's, each day with its totals (the coach's estimates) | `meal show --date D` | `state`, `days` |
+| The meals waiting for an estimate from Pahlavan's meal form: the user's words and the photo's path | `meal pending` | `meals` (`id`, `date`, `at`, `text`, `photo`, `photoFound`), `refused`, `strays` |
+| Record a waiting meal once estimated (its file and photo then removed), or drop one | `meal add --file <f> --pending <id>`, `meal discard --pending <id>` (then `--write`) | `pending` (`files`, `removed`), `result` |
 
 ## `review`
 
@@ -260,7 +280,7 @@ read in place of the vault's through exactly the same reading.
 |---|---|---|
 | `error` | Blocks a write; no override clears it | `ledger-blocked` (a movement an active Ledger constraint rules out, by id or abdominal-strain tag, with swaps), `screening-blocked`, `screening-limit` (the screen's RIR floor, full-body sessions, easy cardio only), `invalid-data` (an item with no name or `sr`, a field of the wrong type, an unknown item or lifts key, a session type the sessions don't hold, a malformed `overrides`), `plan-item-field`, `muscle-tags-duplicate` (a muscle in main and helps of an entry whose tags count), `unknown-ladder`, `rules-invalid`, `lift-entry`, `plan-data`, `until`, `no-lift-entry` (a logged lift with no `lifts` entry), `override-without-reason`, `why-shape` (the plan's `why`, the Why this plan card, can't be read as written: a wrong type, an unknown key, an unknown or repeated family, no `lead`, `date` or `split`, a reason without `title` or `text`, a bad `grade`; `plan-files.md`, "The Why this plan card"), and the plan, profile or Ledger file unreadable (`json`, `profile`, `ledger`) |
 | `warning` | Evidence or the person's own limits; an override with a reason makes it information | `volume-below-minimum` (Moderate), `volume-over-cap` (H), `priority-under` and `priority-over` (the priority muscles, the profile's, declared regions' muscles and confirmed lagging areas, against 10–16, the minimum counting direct sets near failure; Moderate), `priority-room` (more of those priority muscles than the week has room for: 3 with 4 or more lifting days, 2 with 3, 1 with 2 or 30-minute sessions, at the profile's minutes, a priority trained only on the short sessions not counted (direct sets on a lifting day count); H: the coach proposes which come first with their reasons and the user confirms, the rest under Later priorities; at a check-in, raised once), `session-cap` (Weak), `rir-by-type` (H), `rep-range` (Strong), `rep-range-rir` (Moderate), `rest` (Moderate; core, skill and carry work aside), `rest-heavy` (Weak), `pull-push` (H), `no-light-week` (more than 6 loading weeks running; H), `time-over` (the profile's day lengths), `plan-rule` (the profile's `planRules`), `equipment-missing` (a catalogue movement the profile's `equipment` doesn't cover, a tool that stands in for the defining one counting and bodyweight always, cardio left out: a fact the profile states, no grade; swap it, add the tool to the profile, or an override says why it stays), `disliked-movement` (a movement on the profile's `preferences.dislikes`: a fact, no grade; swap it, or an override says why it stays), `step-not-in-gym` (a lift's `inc` the profile's `loads` can't make, a 1 kg step on 2 kg dumbbells or a 1.25 kg step on a bar whose smallest pair is 2.5 kg, with the nearest step the kit makes: a fact, no grade; set that `inc`, correct the loads, or an override says why it stays), `load-jump` (H), `exercise-change` (against the plan as written, with `--plan`, inside a mesocycle, main lifts inside a phase; Weak; with `--redesign`, `redesign-changes` information instead), `similar-to-current` (with `--plan` and `--redesign`: over half of the draft's movements also in the plan as written, its items the shared movements; H), `start-changed` (against the plan as written, with `--plan`: the draft drops or moves its `start`, which would restart plan week 1; a reset answers it with an override), `rir-differs` and `timed-differs` (a field its note or `sr` contradicts; RIR compared only when the note names one), `session-unlisted` (a session neither type list names: never shown or counted), `ladder-start` (a ladder item with no level in the log and no `startLevel` on its ladder: counted as the ladder's lowest level; formats.md, "A ladder's starting level"), `region-coverage` (a coverage region of a priority muscle, or of a declared region's muscle, under 4 direct sets a week; H), `region-declared-short` (a declared weak region under 6 direct sets near failure a week; H), each item with up to 5 options: catalogue movements that bias the region and fit the profile's equipment, the Ledger, the dislikes and the findings acting in full (a confirmed limited overhead reach leaves the overhead presses out), best first, "(in the plan)" where more sets would do; `no-why-card` (the plan has no `why`, the Why this plan card: a candidate still being compared may skip it, the plan that is written has it), `why-split-missing` (the split families the card names nowhere, listed: each family is picked, compared or left out), both with `why-shape` under rule `plan.why-card`; `no-why`, `week-override-in-note`, `logged-count`, `no-muscles`, `muscle-tags-differ`, and the adapter's other plan notes |
-| `info` | Read around, or answered | `region-uncoverable` (a region short of its rule that no catalogue movement can cover with the equipment and the Ledger, with what ruled each out: not a failure), `redesign-changes` (with `--redesign`: the exercises a redesign changes against the plan as written, for the record), `muscle-tags-overridden`, `rir-in-note`, `timed-in-note`, `unknown-exercise`, `snapshot-rebuilt`, `legacy-default`, `ledger-conditions`, `draft-plan`, `override-unused`, and every warning an override answered (with `override`) |
+| `info` | Read around, or answered | `same-path-twice` (two strength movements on one session's same path: the same pattern, regions and grip, a pull-up and a lat pulldown both overhand, or one movement twice; Weak), `movement-twice-a-week` (one accessory, the same name, on two or more days of the week; main lifts, ladders and timed work left out; Weak): each answered with another grip, angle or tool (`planning.md`, section 4, "Repeats take a different path"), or an override with the reason; `grip-unknown` (a name whose parentheses give a grip its catalogue movement doesn't list: its own grip is read), `region-uncoverable` (a region short of its rule that no catalogue movement can cover with the equipment and the Ledger, with what ruled each out: not a failure), `redesign-changes` (with `--redesign`: the exercises a redesign changes against the plan as written, for the record), `muscle-tags-overridden`, `rir-in-note`, `timed-in-note`, `unknown-exercise`, `snapshot-rebuilt`, `legacy-default`, `ledger-conditions`, `draft-plan`, `override-unused`, and every warning an override answered (with `override`) |
 
 - **What is checked:** the plan's ordinary loading week (not its light or
   calibration weeks, which derive from it), each session weighted by the
@@ -270,7 +290,9 @@ read in place of the vault's through exactly the same reading.
   decision?}]` (`formats.md`). One matching a warning's code (and its item,
   when it names one: a muscle by id or label, "A Face Pull", a session
   type) turns that warning, or that item, into information carrying the
-  override; the rule and grade stay with it. It never applies to a hard
+  override; the rule and grade stay with it. One matching an information
+  finding (`same-path-twice`, `movement-twice-a-week`) puts the override on
+  it, or on that item, so its reason shows. It never applies to a hard
   error, an override without a reason is one, and one matching nothing is
   listed in `override-unused`.
 - Quote a finding's `reason` and grade, never a range from memory.
@@ -377,7 +399,12 @@ from memory.
   (`docs/exercise-library.md` in the repository). `movements[]`:
   `{id, name, pattern, equipment, muscles {main, helps}, regions,
   longLength, abdominalStrain, level, load, unilateral, easier, harder,
-  aliases, alsoWith, risk, uses, hotel, guide, fit}`: `alsoWith` the tools
+  aliases, alsoWith, risk, uses, hotel, guide, grips?, fit}`: `grips`, on
+  the pulls, presses and curls whose grip changes the path, `{default,
+  options: [{grip, setup}]}` (the grip the guide describes, and the others
+  with their setup lines; `vocabulary.grips` says what each is), a grip going
+  in a plan item's name in parentheses ("Lat Pulldown (close neutral
+  grip)"), which keeps the movement's muscles and its own history; `alsoWith` the tools
   that stand in for the first of `equipment`; `risk` what it asks of the
   body (`joint:` and `demand:` tags, `vocabulary.risk` saying what each
   means: facts to weigh with the person, never a diagnosis, and nothing
@@ -545,23 +572,25 @@ is merged as it is on disk, validated, written whole and read back.
 | `add` | `--file <items.json>` | Items accepted in the conversation (the suggestion recorded accepted, the item from today); the user's own (no Why); an item's `id` with changed fields: a change from today, the old settings kept for the past. A sitting item whose limit is set or changed without a card time gets its card at the limit minus 30 (`add` and `suggest`; the result's note says so) |
 | `decline` | `--file <items.json>` | Items declined in the conversation, kept as dismissed suggestions |
 | `accept`, `dismiss` | `--id <id[,id]>` | As the chips do |
+| `pause`, `resume` | `--id <id[,id]>` | As the Habits screen's Pause and Resume: paused from today (not due, no reminders; the history stays), or resumed from today (the paused days stay paused). An item paused already, or not paused, is `unchanged` |
+| `remove` | `--id <id[,id]>` | As the Habits screen's Remove: the item and its ticks and amounts in `tracking.json` go (a linked habit keeps its check-ins). Pausing keeps the history, so offer it first |
 | `morning` | `--at HH:MM` or `--off` | The morning check-in's card |
 | `body-record` | `--schedule plan`, or `--schedule fixed --tape-from D --tape-every N --tests-from D --tests-every N` | When the tape, photos and tests are due |
 | `fresh` | | The bring-over recorded as empty (a fresh start: no offer) |
 | `protein` | | The coach's protein item to the engine's target |
-| `apply` | `--file <changes.json>` | Several at once, in one write: `{suggest, add, decline, accept, dismiss, morning, bodyRecord, bringOver, protein}` |
+| `apply` | `--file <changes.json>` | Several at once, in one write: `{suggest, add, decline, accept, dismiss, pause, resume, remove, morning, bodyRecord, bringOver, protein}` |
 | `day` | `--date D` | Read only. Every item due that day (scheduled, started, not paused): `{id, name, kind, state, done, value, target, unit, desk, via, habit: {id, name, ticked, value}, tickable}` with one reason each (`tracking.day`; `desk`: a stand-up's minutes of `value` stood at the desk with Standing now on, null for the other kinds); `open` (the supplements, ticks and amounts not done); `notDue` (with why: `paused`, `off`, `none`, `future`); `training` (`logged`, `sessions`, `workoutTicked`, `planned`, `didYouTrain` `{answer, at, by}`, `mark`); `morning` (`on`, `at`, `done`, `checkedAt`, `answer`, `filled`) |
 | `tick` | `--id <id[,id]> --date D`, `--done true\|false` or `--amount N` | The day's tick (supplements, ticks; `--done` alone is true) or total (amounts) into `tracking.json`, and the same on the linked habit in the habit check-ins file, both merged, written and read back in one go: `results` (`set` or `unchanged`, with a note), `ops`, `habitChanges`, `changed`, `after` (those items and `open` once written), `written`. Exit 1 writes nothing: an unknown id, `--amount` on a tick or `--done` on an amount, a stand-up, desk-break or sitting item (Pahlavan counts them), a date after today, a linked item with no `habits-data.json`. A paused or off-day item is ticked with a warning |
 
 An items file holds one item, a list, or `{"items": [...]}`. The output:
 `results` (per change: `added`, `updated`, `suggested`, `accepted`,
-`dismissed`, `declined`, `set`, `recorded`, `skipped` or `unchanged`, with a
-note), `changed`, `ops` (exactly what is written), `after` (what is tracked
+`dismissed`, `declined`, `paused`, `resumed`, `removed`, `set`, `recorded`,
+`skipped` or `unchanged`, with a note), `changed`, `ops` (exactly what is written), `after` (what is tracked
 once it is written, in words), `handOver` (`before`, `after`: whether
 Pahlavan counts as set up, so a vault's Habit Nudges plugin steps aside, with a `note`),
 `dryRun`, `written`. Exit 1 writes nothing: a coach item without its Why, an
 unknown field, a new item named like a tracked one (pass its `id` to change
-it), an unknown suggestion id, an invalid tracking file. `warnings`: a link
+it), an unknown suggestion id or tracked item id, an invalid tracking file. `warnings`: a link
 to a habit that does not exist, a protein item not linked to the
 Protein habit, a change to the user's own item.
 
@@ -578,6 +607,10 @@ back.
   Pahlavan's own and any other writer's included. `steps` and `floors` go on the
   day before (the day they count for), as the morning check-in files them.
   It never sets `checkedAt`, so the user's own morning check-in still asks.
+- **"I'm ill today"** is `morning.illness`: `true` sets the day's illness
+  (readiness stops hard training that day), `false` takes it off. Only from
+  the user's own answer that day (the `today` job asks); it is a yes or a
+  no, never a conflict. `after.illness` says what the day holds.
 - **Never over the user's entry.** A field that already holds another value
   for that date is a `conflict`: exit 1, nothing written, and the result
   names the field, what the file holds and what the record says. Ask the
@@ -590,6 +623,62 @@ back.
   writes nothing: an unknown part or field, a value out of the forms' limits
   (weight 30 to 250 kg, the tape 40 to 200 cm, arm 15 to 70, the tests'
   ranges), a date after today, a conflict.
+
+## The write path: `meal`
+
+`meal add --vault . --json --file <meal.json> [--write]` records one meal the
+coach estimated (`meal.md`) in `Coach/meals.json` (the file's format is in
+`formats.md`, "`meals.json`"). A dry run unless `--write`; with it, the file
+is merged as it is on disk, written whole and read back.
+
+- **The numbers are the coach's estimates** (SKILL.md house rule 1's named
+  exception): the engine checks the record's shape and bounds (protein 0 to
+  300 g a meal, calories to 5,000, fiber to 150 g, fat to 400 g, carbs to
+  800 g), keeps the file by date and time and adds up each day; it never
+  checks an estimate against food data. Quote them with "about".
+- **Its id** is made from its date and time (`2026-11-14-1310`, a counter
+  after it for a second meal at that time, `-meal` with no time) when the
+  file gives none. The same meal again is `already` (nothing written).
+- **Counting ruled out:** where the eating plan's `counting` is `"none"`
+  (the eating-history screen), a meal with calories, fiber, fat or carbs is
+  refused (`counting-none`): protein only.
+- **The Protein tick:** when the day's estimated protein reaches the
+  Protein item's goal (its grams, else the eating plan's floor), the same
+  write ticks the item and its linked habit, as `track tick` does;
+  `protein.tick` says `added`, `already`, `short` (under the goal),
+  `no-item` or `no-goal`.
+- **The output:** `result` (`added` or `already`), `meal` (as written, its
+  `id` and `by: coach` filled in), `day` (`date`, `meals`, `proteinG`,
+  `kcal`, `fiberG`, `fatG`, `carbsG`, each the sum over the meals that give
+  it, null when none do, and `partial`, the numbers some meals leave out),
+  `protein` (`item`, `goalG`, `totalG`, `tick`), `dryRun`, `written`. Exit 1
+  writes nothing: a date after today, a number out of bounds, a meal with no
+  foods, `counting-none`, an unreadable `meals.json`.
+- **`meal show [--date D]`**, or `--from D --to D` (up to 62 days): each
+  day's totals and its meals (`days[].list`), and `state` (`found`,
+  `missing`, `invalid`). Read only.
+- **`meal delete --id <meal id> [--write]`** takes one meal out (a
+  correction is a delete, then an add). The day's Protein tick stays as it
+  is: when the day no longer reaches the goal, offer `track tick --done
+  false`. An unknown id is exit 1 (`not-found`).
+- **Waiting meals** (Pahlavan's meal form, `meal.md` section 0): one file
+  each in `Coach/Inbox/meals/` (`<yyyy-MM-dd>T<HH-mm-ss>-meal.json`, its
+  photo beside it with the same stem; `formats.md`, "Waiting meals"),
+  the user's words and a photo, never a number. **`meal pending`** lists
+  them, read only: `meals` (`id`, `file`, `date`, `at`, `text`, `photo`
+  (its vault path, for the Read tool), `photoFound` (a photo stays out of
+  git, so it may be on the other Mac: `photo-missing` warns), `made`),
+  `refused` (a file that isn't a waiting meal, with why), `strays` (a
+  photo with no entry, left from a removal that stopped half way), and
+  `state` (`found`, `missing`). **`meal add --pending <id>`** records the
+  meal its estimate gives: the dry run lists `pending.files`; with
+  `--write`, once the meal reads back, the entry and then its photo are
+  removed (`pending.removed`), before the Protein tick. A meal recorded
+  before (`already`) still has its waiting files removed. A waiting meal
+  not there is exit 1 (`not-found`); a meal dated another day than the
+  form's warns `pending-date`. **`meal discard --pending <id>
+  [--write]`** removes a waiting meal's files without recording it (a
+  stray photo too, by its id). The removals touch only those files.
 
 ## The baseline note: `baseline`
 

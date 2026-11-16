@@ -1,9 +1,9 @@
 {
   "id": "pahlavan",
-  "name": "Pahlavan",
-  "version": "0.28.2",
+  "name": "Pahlavan - Fitness Workout and Health Coach",
+  "version": "0.29.0",
   "minAppVersion": "1.7.2",
-  "description": "Plan, log and review your training in your own notes: today's session, how ready you feel, your week, an eating plan and daily habits with reminders, with an optional AI coach in Claude Code.",
+  "description": "Fitness, workout and health coach: plan, log and review your training in your notes, with readiness, an eating plan, habits and an optional AI coach in Claude Code.",
   "author": "Saeed Ghorbani",
   "isDesktopOnly": true,
   "fundingUrl": "https://ko-fi.com/saeedghorbani70608"

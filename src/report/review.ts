@@ -441,18 +441,25 @@ export function liftLoad(
   return weights ? { unit, increment, weights, kit: loadKindOf(ex?.equipment, ex?._lift?.db) } : { unit, increment };
 }
 
-function analyseLift(ctx: Ctx, exercise: string, lc: LiftContext) {
+/**
+ * One lift's numbers. `at` is the plan item the target is for (a session's
+ * own row); without it, the lift's first slot in this week's plan.
+ */
+function analyseLift(ctx: Ctx, exercise: string, lc: LiftContext, at?: ExerciseSlot) {
   const { info, ex, unit, increment, tops, trend: own } = trendOf(ctx, exercise);
   // The Hotel sessions left out, said in the trend's own note too.
   const hotel = hotelLeftOut(ctx, exercise);
   const trend = hotel ? { ...own, reason: { ...own.reason, note: joinNotes(own.reason.note, hotel.reason.note) ?? '' } } : own;
-  const slot = currentSlot(ctx, exercise);
+  const slot = at ?? currentSlot(ctx, exercise);
   // The gym's real weights for this lift: every target lands on one (never for a ladder slot).
   const load = liftLoad(ex, unit, increment, slot);
   const weights = load.weights;
   const detected = detectStall(trend.value, lc.adherencePct);
   const stall = lc.calibration ? calibrationStall(detected, lc.calibration) : detected;
-  const repRange = info?.repRange ?? (slot?.main ? slot.repRange : null);
+  // The item's own range when the plan has the lift (a logged item's is the lifts entry's, `rangeOf`): an exercise
+  // whose lifts entry is left from another session (the bench once A's main press, now 10-15 in D) targets the
+  // range its row shows. Without a lifts entry, only a main slot's range gives a target, as before.
+  const repRange = (info && slot ? slot.repRange : null) ?? info?.repRange ?? (slot?.main ? slot.repRange : null);
   const name = nameOf(ctx, exercise);
   let next: Result<unknown> | null = null;
   let returnAdjusted: Result<unknown> | null = null;
@@ -1373,15 +1380,9 @@ export function knownLifts(data: VaultData): string[] {
   return [...new Set([...data.plan.lifts.map((l) => l.name), ...logged])];
 }
 
-/**
- * One lift's answer. A lift with no top sets that is not in this week's
- * plan has nothing to answer from (its numbers are empty, not zero): a
- * warning says so and names the lifts this week's plan has.
- */
-export function buildNext(data: VaultData, date: IsoDate, exercise: string) {
-  const review = buildReview(data, date);
-  const ctx = context(data, date);
-  const lift = review.lifts.find((l) => l.exercise === exercise) ?? analyseLift(ctx, exercise, {
+/** The lift context a lift outside the review's list is analysed with, from the review's own numbers. */
+function liftContextOf(data: VaultData, ctx: Ctx, review: ReturnType<typeof buildReview>): LiftContext {
+  return {
     adherencePct: review.adherence.value.lifting.pct,
     deloadThisWeek: review.deload?.value.deload ?? false,
     protocol: review.missed.value,
@@ -1393,7 +1394,27 @@ export function buildNext(data: VaultData, date: IsoDate, exercise: string) {
     weeksToMesocycleEnd: review.week.planWeek ? lightWeekAt(data.rules.rules.lightWeeks, review.week.planWeek).weeksToMesocycleEnd : null,
     plannedPerWeek: review.volume.planned.value.perWeek,
     lightWeek: { load: data.rules.rules.lightWeeks.load, rirAdd: data.rules.rules.lightWeeks.rirAdd, from: fromKind(data.rules, 'lightWeeks') },
-  });
+  };
+}
+
+/**
+ * A lift's numbers for one plan item: `session` asks when an exercise sits in
+ * two sessions with different rep ranges, so each row's target is its own.
+ */
+export function liftAtSlot(data: VaultData, date: IsoDate, review: ReturnType<typeof buildReview>, exercise: string, slot: ExerciseSlot) {
+  const ctx = context(data, date);
+  return analyseLift(ctx, exercise, liftContextOf(data, ctx, review), slot);
+}
+
+/**
+ * One lift's answer. A lift with no top sets that is not in this week's
+ * plan has nothing to answer from (its numbers are empty, not zero): a
+ * warning says so and names the lifts this week's plan has.
+ */
+export function buildNext(data: VaultData, date: IsoDate, exercise: string) {
+  const review = buildReview(data, date);
+  const ctx = context(data, date);
+  const lift = review.lifts.find((l) => l.exercise === exercise) ?? analyseLift(ctx, exercise, liftContextOf(data, ctx, review));
   const warnings: VaultWarning[] = [];
   if (lift.sessions === 0 && !lift.inPlanThisWeek) {
     const current = review.lifts.filter((l) => l.inPlanThisWeek).map((l) => l.name);

@@ -454,6 +454,17 @@ export function evidenceRules(): EvidenceRule[] {
       note: 'Planned variation changes where a muscle grows, not how much, and random variation does not help: a movement chosen to bias a region is kept for the whole phase.',
       sources: [S.costa2021, S.fonseca2014, S.kassiano2022, S.bazValle2019],
     },
+    {
+      id: 'choice.path-variety',
+      topic: 'exercise-choice',
+      title: 'A repeat takes a different path',
+      value: null,
+      unit: null,
+      grade: 'weak',
+      note: 'Two movements on the same path in one session (the same pattern, the same regions and the same grip, a pull-up and a lat pulldown both overhand), or one accessory on two days of the week, are planned as different grips, angles or tools, kept for the block: variety and a different path, as planned variation is. What a grip changes is measured only acutely: a little muscle activity between muscles and the load a person can handle (EMG studies, capped at Weak); no study shows one grip grows a muscle more, and the upper and lower lats cannot be trained apart.',
+      sources: [S.kassiano2022, S.bazValle2019, S.andersen2014, S.lusk2010, S.lopezVivancos2023, S.vigotsky2022],
+      checks: ['same-path-twice', 'movement-twice-a-week'],
+    },
     // ---------------------------------------------------------------- progression
     {
       id: 'progression.double',

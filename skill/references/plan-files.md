@@ -93,7 +93,12 @@ change below; such notes are never edited by hand.
    diff lists every key as added. A new plan (a fresh start, a reset, a
    redesign, a phase review's next phase) starts from `engine draft`'s
    blank plan (`planning.md`, step 1.4); a change inside the plan (a swap,
-   the next month) is the plan as written with the change made. A ladder
+   the next month) is the plan as written with the change made. A grip
+   other than the one a movement's guide describes goes in the item's name
+   in parentheses (`"Lat Pulldown (close neutral grip)"`, one of its
+   `catalogue` grips), with that grip's setup line in its guide entry: the
+   catalogue's muscles count, and the name is its own lift in the log
+   (`planning.md`, section 4, "Repeats take a different path"). A ladder
    item is written as `"<Ladder> (your level)"` with its `ladder` id and is
    never one of the two logged lifts. Its ladder in `ladders` carries the
    level this plan starts it at as `"startLevel": N` (formats.md, "A
