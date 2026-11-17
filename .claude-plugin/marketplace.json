@@ -1,0 +1,23 @@
+{
+  "name": "pahlavan",
+  "owner": {
+    "name": "Saeed Ghorbani",
+    "url": "https://github.com/saeed1262"
+  },
+  "description": "Pahlavan's fitness coach for Claude Code.",
+  "plugins": [
+    {
+      "name": "pahlavan",
+      "source": "./coach",
+      "description": "A science-based fitness coach in Claude Code: plans your strength training, logs workouts and meals, and reviews each week with you, in plain files on your computer.",
+      "category": "health",
+      "tags": [
+        "fitness",
+        "workout",
+        "coach",
+        "nutrition",
+        "health"
+      ]
+    }
+  ]
+}
