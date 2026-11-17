@@ -1,0 +1,26 @@
+{
+  "name": "pahlavan",
+  "displayName": "Pahlavan - Fitness Workout and Health Coach",
+  "version": "0.29.1",
+  "description": "A science-based fitness coach in Claude Code: it plans your strength training from your own goals, time and equipment, logs your workouts and meals, and reviews each week with you. Your data stays in plain files on your computer.",
+  "author": {
+    "name": "Saeed Ghorbani",
+    "url": "https://github.com/saeed1262"
+  },
+  "homepage": "https://github.com/saeed1262/pahlavan",
+  "repository": "https://github.com/saeed1262/pahlavan",
+  "license": "Elastic-2.0",
+  "keywords": [
+    "fitness",
+    "workout",
+    "strength-training",
+    "coach",
+    "nutrition",
+    "habits",
+    "health"
+  ],
+  "documentationUrl": "https://github.com/saeed1262/pahlavan/blob/main/docs/without-obsidian.md",
+  "supportUrl": "https://github.com/saeed1262/pahlavan/issues",
+  "privacyPolicyUrl": "https://github.com/saeed1262/pahlavan/blob/main/docs/privacy.md",
+  "icon": "./icon.png"
+}
