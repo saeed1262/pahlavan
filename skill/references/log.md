@@ -7,9 +7,9 @@ engine's `log` commands, which write exactly what Pahlavan's Log screen
 writes. Each is a dry run until `--write`.
 
 ```bash
-node .claude/skills/fitness-coach/scripts/engine.cjs log add --vault . --json --file <session.json> [--no-habit] [--write]   # one session, the dialog's shape; ticks the Workout habit
-node .claude/skills/fitness-coach/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D [--write]   # a ladder level
-node .claude/skills/fitness-coach/scripts/engine.cjs log fix --vault . --json --date D --type T [--label L] --lift lift1|lift2 [--weight W] [--reps R] [--clear-planned] [--write]   # correct a logged top set, or drop an adopted swap's "planned"
+node <skill>/scripts/engine.cjs log add --vault . --json --file <session.json> [--no-habit] [--write]   # one session, the dialog's shape; ticks the Workout habit
+node <skill>/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D [--write]   # a ladder level
+node <skill>/scripts/engine.cjs log fix --vault . --json --date D --type T [--label L] --lift lift1|lift2 [--weight W] [--reps R] [--clear-planned] [--write]   # correct a logged top set, or drop an adopted swap's "planned"
 ```
 
 Rules for this job:

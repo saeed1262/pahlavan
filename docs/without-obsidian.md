@@ -50,6 +50,19 @@ Either way, Claude Code asks you to sign in with your Claude account the first t
 
 ## 3. Get the coach
 
+Choose one way.
+
+**A. As a Claude Code plugin** (two commands, and Claude Code updates it for you). In a terminal, type:
+
+```
+claude plugin marketplace add saeed1262/pahlavan
+claude plugin install pahlavan@pahlavan
+```
+
+Inside Claude Code you can type the same as `/plugin marketplace add saeed1262/pahlavan`, then `/plugin install pahlavan@pahlavan`, and install it for yourself. The coach is then there in every folder you open in Claude Code. Make a folder for your training, such as `Pahlavan` in your Documents folder: it holds your plan and your training history from now on, so keep it in your backups.
+
+**B. From the zip:**
+
 1. Open the [latest release](https://github.com/saeed1262/pahlavan/releases/latest) and download `pahlavan-coach-<version>.zip` from its files.
 2. Double-click the zip (on Windows: right-click, **Extract All**). You get a folder named `Pahlavan`.
 3. **Move the folder somewhere it will stay,** such as your Documents folder, not Downloads. It holds your plan and your training history from now on, so keep it in your backups. You can rename it.
@@ -68,7 +81,7 @@ Inside are a `START HERE.md` and a hidden `.claude` folder that holds the coach.
 
 The first time, Claude Code asks whether you trust the folder: say yes. Type `/fitness-coach` and you should see the coach offered as you type. If it isn't, Claude Code was opened somewhere else: check that you chose the `Pahlavan` folder itself, not the folder around it.
 
-**Permission prompts.** Claude Code asks before it runs a command or writes a file. The coach's commands start with `node .claude/skills/fitness-coach/scripts/engine.cjs`, and they read and write only inside this folder. You can allow each one as it comes, or allow them for this folder so the coach asks less.
+**Permission prompts.** Claude Code asks before it runs a command or writes a file. The coach's commands start with `node` and the path of its engine (ending `fitness-coach/scripts/engine.cjs`), and they read and write only inside this folder. You can allow each one as it comes, or allow them for this folder so the coach asks less.
 
 ## 5. Your intake
 
@@ -154,7 +167,7 @@ Everything stays in your `Pahlavan` folder:
 ```
 Pahlavan/
   START HERE.md
-  .claude/skills/fitness-coach/   the coach (replaced when you update)
+  .claude/skills/fitness-coach/   the coach, from the zip (with the plugin, Claude Code keeps it)
   Fitness/
     plan-data.json                your plan
     fitness-log-data.json         your training log
@@ -172,16 +185,19 @@ The `.md` files are plain text you can read in any editor. Don't edit the `.json
 
 ## Update the coach
 
-When a new version comes out, download its `pahlavan-coach-<version>.zip`, and replace your folder's `.claude/skills/fitness-coach` with the one inside it. Your `Fitness` folder stays exactly as it is.
+- **The plugin:** type `claude plugin update pahlavan@pahlavan` in a terminal, then start Claude Code again. To have it done for you, turn on auto-update for the `pahlavan` marketplace in `/plugin`, under Marketplaces.
+- **The zip:** when a new version comes out, download its `pahlavan-coach-<version>.zip`, and replace your folder's `.claude/skills/fitness-coach` with the one inside it.
+
+Either way, your `Fitness` folder stays exactly as it is.
 
 ## Add the screens later
 
-The folder is already an Obsidian vault in waiting. Install [Obsidian](https://obsidian.md), open your `Pahlavan` folder as a vault, and install Pahlavan from **Settings, Community plugins, Browse**. The plugin reads the same files, so your plan, log and letters appear on its screens. The [user guide](user-guide.md) takes it from there.
+The folder is already an Obsidian vault in waiting. Install [Obsidian](https://obsidian.md), open your `Pahlavan` folder as a vault, and install Pahlavan from **Settings, Community plugins, Browse**. The plugin reads the same files, so your plan, log and letters appear on its screens. If you installed the coach as a Claude Code plugin, you can skip Pahlavan's **Set up the coach** button, which puts a second copy in the folder. The [user guide](user-guide.md) takes it from there.
 
 ## If something goes wrong
 
 - **`node` or `claude` isn't found.** Close the terminal and open a new one. For Claude Code, Anthropic's [troubleshooting page](https://code.claude.com/docs/en/troubleshoot-install) covers the usual causes.
-- **`/fitness-coach` isn't offered.** Claude Code isn't open in the `Pahlavan` folder itself (step 4).
+- **`/fitness-coach` isn't offered.** With the plugin: `claude plugin list` should show `pahlavan`; start Claude Code again after installing it. With the zip: Claude Code isn't open in the `Pahlavan` folder itself (step 4).
 - **The coach says a file doesn't pass its check.** Tell it what you changed last; it can show the problem and fix it through the engine.
 - **Anything else:** [open an issue](https://github.com/saeed1262/pahlavan/issues) with what you typed and what you saw. Leave out anything personal.
 

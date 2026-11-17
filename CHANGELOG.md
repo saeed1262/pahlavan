@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.1: the coach as a Claude Code plugin
+
+- **Install the coach in two commands.** The repository is now a Claude Code plugin marketplace: `claude plugin marketplace add saeed1262/pahlavan`, then `claude plugin install pahlavan@pahlavan` (or the same with `/plugin` inside Claude Code), and `/fitness-coach` is there in every folder you open. `claude plugin update pahlavan@pahlavan` updates it, or Claude Code does on its own with the marketplace's auto-update on. The zip stays, for a folder that carries its own coach. `npm run pack-plugin` builds the plugin in `coach/`, and a test fails while it is behind the skill or the version. [Pahlavan without Obsidian](docs/without-obsidian.md) gives both ways.
+- **The coach finds its engine wherever it's installed.** Its commands named the engine by the vault's `.claude/skills/fitness-coach/` folder; they now name the skill's own folder, which Claude Code fills in, so the same skill runs from the vault, the zip or the plugin. Pahlavan's **Set up the coach** writes the new skill.
+- **A privacy policy,** [docs/privacy.md](docs/privacy.md): what stays in your files, and what Claude Code sends to Anthropic.
+
 ## 0.29.0: the coach without Obsidian, a name people search for, meals, and grips
 
 The coach now works on its own in Claude Code, in a plain folder with no Obsidian, and the plugin's name in the directory says what it is. It estimates a meal from a photo or a description. Pulls, presses and curls gain their grips, and the plan check notes a movement repeated on the same path.

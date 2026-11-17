@@ -5,45 +5,45 @@ this skill (`scripts/engine.cjs`, version in `scripts/VERSION`). It runs on any
 machine with Node and needs nothing else. Run it from the vault root:
 
 ```bash
-node .claude/skills/fitness-coach/scripts/engine.cjs review    --vault . --json [--date YYYY-MM-DD] [--plan <draft.json>] [--pretty]
-node .claude/skills/fitness-coach/scripts/engine.cjs readiness --vault . --json [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs session   --vault . --json [--date D] [--mode full|express|hotel] [--type T] [--plan <draft.json>] [--freeze [--lift1 L] [--lift2 L] [--skip "<name>,<name>"]]
-node .claude/skills/fitness-coach/scripts/engine.cjs next      --vault . --json --lift "<name or short name>" [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs check     --vault . --json [--plan <draft.json>] [--redesign] [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs plan-write --vault . --json --file <draft.json> [--redesign] [--date D] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs draft     --vault . --json
-node .claude/skills/fitness-coach/scripts/engine.cjs overlap   --json --plans <a.json,b.json> [--vault .]
-node .claude/skills/fitness-coach/scripts/engine.cjs evidence  --json [--topic volume|effort|load|rest|tempo|order|range-of-motion|exercise-choice|progression|light-weeks|readiness|calibration|concurrent|activity|regions|findings|standing-rules]
-node .claude/skills/fitness-coach/scripts/engine.cjs catalogue --json [--pattern <pattern>] [--region <region>] [--muscle <muscle>] [--equipment <e1,e2>] [--level beginner|intermediate|advanced] [--query <text>] [--vault .] [--md]
-node .claude/skills/fitness-coach/scripts/engine.cjs validate  <file> --json [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|meals|pending-meal|inbox|letter]
-node .claude/skills/fitness-coach/scripts/engine.cjs checkin template --vault . --json [--date D] [--time HH:MM]
-node .claude/skills/fitness-coach/scripts/engine.cjs checkin add --vault . --json --file <answers.json> [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs tracked   --vault . --json [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs habits    --vault . --json [--date D] [--item <id>]
-node .claude/skills/fitness-coach/scripts/engine.cjs due       --vault . --json [--date D] [--time HH:MM]
-node .claude/skills/fitness-coach/scripts/engine.cjs bring-over --vault . --json [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs track <action> --vault . --json [...] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs track day --vault . --json --date D
-node .claude/skills/fitness-coach/scripts/engine.cjs track tick --vault . --json --id <id[,id]> --date D [--done true|false] [--amount N] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs body      --vault . --json --file <record.json> [--replace] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs log add   --vault . --json --file <session.json> [--no-habit] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs log fix   --vault . --json --date D --type T --lift lift1|lift2 [--label L] [--weight W] [--reps R] [--clear-planned] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs log show  --vault . --json --date D --type T [--label L]
-node .claude/skills/fitness-coach/scripts/engine.cjs log edit  --vault . --json --date D --type T [--label L] --file <edit.json> [--no-habit] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs log delete --vault . --json --date D --type T [--label L] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs baseline  --vault . --json --date D
-node .claude/skills/fitness-coach/scripts/engine.cjs food      --vault . --json [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs energy    --vault . --json --pal N [--rate R] [--meals N] [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs eating    --vault . --json --file <plan.json> [--replace] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs meal add  --vault . --json --file <meal.json> [--pending <id>] [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs meal pending --vault . --json
-node .claude/skills/fitness-coach/scripts/engine.cjs meal discard --vault . --json --pending <id> [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs meal show --vault . --json [--date D]
-node .claude/skills/fitness-coach/scripts/engine.cjs meal show --vault . --json --from D --to D
-node .claude/skills/fitness-coach/scripts/engine.cjs meal delete --vault . --json --id <meal id> [--write]
-node .claude/skills/fitness-coach/scripts/engine.cjs inbox     --vault . --json [--write] [--phone]
-node .claude/skills/fitness-coach/scripts/engine.cjs folders   --vault . --json
+node <skill>/scripts/engine.cjs review    --vault . --json [--date YYYY-MM-DD] [--plan <draft.json>] [--pretty]
+node <skill>/scripts/engine.cjs readiness --vault . --json [--date D]
+node <skill>/scripts/engine.cjs session   --vault . --json [--date D] [--mode full|express|hotel] [--type T] [--plan <draft.json>] [--freeze [--lift1 L] [--lift2 L] [--skip "<name>,<name>"]]
+node <skill>/scripts/engine.cjs next      --vault . --json --lift "<name or short name>" [--date D]
+node <skill>/scripts/engine.cjs check     --vault . --json [--plan <draft.json>] [--redesign] [--date D]
+node <skill>/scripts/engine.cjs plan-write --vault . --json --file <draft.json> [--redesign] [--date D] [--write]
+node <skill>/scripts/engine.cjs draft     --vault . --json
+node <skill>/scripts/engine.cjs overlap   --json --plans <a.json,b.json> [--vault .]
+node <skill>/scripts/engine.cjs evidence  --json [--topic volume|effort|load|rest|tempo|order|range-of-motion|exercise-choice|progression|light-weeks|readiness|calibration|concurrent|activity|regions|findings|standing-rules]
+node <skill>/scripts/engine.cjs catalogue --json [--pattern <pattern>] [--region <region>] [--muscle <muscle>] [--equipment <e1,e2>] [--level beginner|intermediate|advanced] [--query <text>] [--vault .] [--md]
+node <skill>/scripts/engine.cjs validate  <file> --json [--kind profile|program|session|checkin|body|ledger|tracking|nudges|sitting|eating|meals|pending-meal|inbox|letter]
+node <skill>/scripts/engine.cjs checkin template --vault . --json [--date D] [--time HH:MM]
+node <skill>/scripts/engine.cjs checkin add --vault . --json --file <answers.json> [--write]
+node <skill>/scripts/engine.cjs tracked   --vault . --json [--date D]
+node <skill>/scripts/engine.cjs habits    --vault . --json [--date D] [--item <id>]
+node <skill>/scripts/engine.cjs due       --vault . --json [--date D] [--time HH:MM]
+node <skill>/scripts/engine.cjs bring-over --vault . --json [--date D]
+node <skill>/scripts/engine.cjs track <action> --vault . --json [...] [--write]
+node <skill>/scripts/engine.cjs track day --vault . --json --date D
+node <skill>/scripts/engine.cjs track tick --vault . --json --id <id[,id]> --date D [--done true|false] [--amount N] [--write]
+node <skill>/scripts/engine.cjs body      --vault . --json --file <record.json> [--replace] [--write]
+node <skill>/scripts/engine.cjs log add   --vault . --json --file <session.json> [--no-habit] [--write]
+node <skill>/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D [--write]
+node <skill>/scripts/engine.cjs log fix   --vault . --json --date D --type T --lift lift1|lift2 [--label L] [--weight W] [--reps R] [--clear-planned] [--write]
+node <skill>/scripts/engine.cjs log show  --vault . --json --date D --type T [--label L]
+node <skill>/scripts/engine.cjs log edit  --vault . --json --date D --type T [--label L] --file <edit.json> [--no-habit] [--write]
+node <skill>/scripts/engine.cjs log delete --vault . --json --date D --type T [--label L] [--write]
+node <skill>/scripts/engine.cjs baseline  --vault . --json --date D
+node <skill>/scripts/engine.cjs food      --vault . --json [--date D]
+node <skill>/scripts/engine.cjs energy    --vault . --json --pal N [--rate R] [--meals N] [--date D]
+node <skill>/scripts/engine.cjs eating    --vault . --json --file <plan.json> [--replace] [--write]
+node <skill>/scripts/engine.cjs meal add  --vault . --json --file <meal.json> [--pending <id>] [--write]
+node <skill>/scripts/engine.cjs meal pending --vault . --json
+node <skill>/scripts/engine.cjs meal discard --vault . --json --pending <id> [--write]
+node <skill>/scripts/engine.cjs meal show --vault . --json [--date D]
+node <skill>/scripts/engine.cjs meal show --vault . --json --from D --to D
+node <skill>/scripts/engine.cjs meal delete --vault . --json --id <meal id> [--write]
+node <skill>/scripts/engine.cjs inbox     --vault . --json [--write] [--phone]
+node <skill>/scripts/engine.cjs folders   --vault . --json
 ```
 
 - **Run each line directly, one command per call.** Each command is run as

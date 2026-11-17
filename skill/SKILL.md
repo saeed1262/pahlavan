@@ -18,6 +18,15 @@ plan against the guardrails and holds the evidence library
 (`references/numbers.md`). Pahlavan still can't express some things
 (`references/planning.md`, "What Pahlavan can't express").
 
+**Where the engine is.** `<skill>` in every command here and in
+`references/` is this skill's folder, `${CLAUDE_SKILL_DIR}`: run
+`node <skill>/scripts/engine.cjs ...` with that folder put in (in quotes
+when it has a space). If the folder above reads as a dollar sign and
+braces, not a path, use the base directory Claude Code named when this
+skill loaded. The skill may sit in the vault's `.claude/skills/` or come
+from a Claude Code plugin: the commands are the same, and `--vault .`
+is always the folder Claude Code was opened in.
+
 **This vault's own extras.** When `<fitness>/Coach/local.md` exists, read it
 before any job: it names what this vault adds (other commands that log or
 review, notes to read, scripts to run after a plan change, files from older
@@ -108,7 +117,7 @@ and `tracking.md` (the habit guide). numbers.md's opening (the part above
 ## House rules
 
 1. **Numbers come from code.** The engine first: `node
-   .claude/skills/fitness-coach/scripts/engine.cjs review --vault . --json
+   <skill>/scripts/engine.cjs review --vault . --json
    [--date D]` (also `readiness`, `next`, `check`, `evidence`, `catalogue`,
    `validate`, `tracked`, `habits`, `due`, `food`; `numbers.md` says which
    answers what; a draft plan's numbers: `review --plan <draft>`). Every rule
@@ -259,7 +268,7 @@ and `tracking.md` (the habit guide). numbers.md's opening (the part above
 
 `<fitness>` is the fitness folder, Pahlavan's setting (**Files** in its
 settings; a new vault's is `Fitness`). `node
-.claude/skills/fitness-coach/scripts/engine.cjs folders --vault . --json`
+<skill>/scripts/engine.cjs folders --vault . --json`
 prints it and every file's path (`paths`); paths below without a folder are
 in it.
 
@@ -295,18 +304,18 @@ logged before units were stored) is in the lift's own `unit`, else `liftUnit`
 (1 kg = 2.20462 lb). Body weight, the tape and all of `body-data.json` are kg.
 
 The engine (run from the vault root), `node
-.claude/skills/fitness-coach/scripts/engine.cjs <command> --vault . --json`,
+<skill>/scripts/engine.cjs <command> --vault . --json`,
 reads and prints JSON; its commands, which answers what, and its writes
 (each a dry run until `--write`) are in `numbers.md`. It needs Node 18 or
 later and nothing else. The coach's log writes:
 
 ```bash
-node .claude/skills/fitness-coach/scripts/engine.cjs log add --vault . --json --file <session.json>   # one session (log.md); --write after the yes
-node .claude/skills/fitness-coach/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D   # a ladder level (always --date: rule 17)
-node .claude/skills/fitness-coach/scripts/engine.cjs log fix --vault . --json --date D --type T [--label L] --lift lift1|lift2 [--weight W] [--reps R] [--clear-planned]   # a top set, or a swap the plan adopted (log.md)
-node .claude/skills/fitness-coach/scripts/engine.cjs log show --vault . --json --date D --type T [--label L]   # a logged session as log edit takes it
-node .claude/skills/fitness-coach/scripts/engine.cjs log edit --vault . --json --date D --type T [--label L] --file <edit.json>   # its changed fields (log.md); --write after the yes
-node .claude/skills/fitness-coach/scripts/engine.cjs log delete --vault . --json --date D --type T [--label L]   # take it out (log.md); --write after the yes
+node <skill>/scripts/engine.cjs log add --vault . --json --file <session.json>   # one session (log.md); --write after the yes
+node <skill>/scripts/engine.cjs log ladder --vault . --json --id <ladder> --level N --date D   # a ladder level (always --date: rule 17)
+node <skill>/scripts/engine.cjs log fix --vault . --json --date D --type T [--label L] --lift lift1|lift2 [--weight W] [--reps R] [--clear-planned]   # a top set, or a swap the plan adopted (log.md)
+node <skill>/scripts/engine.cjs log show --vault . --json --date D --type T [--label L]   # a logged session as log edit takes it
+node <skill>/scripts/engine.cjs log edit --vault . --json --date D --type T [--label L] --file <edit.json>   # its changed fields (log.md); --write after the yes
+node <skill>/scripts/engine.cjs log delete --vault . --json --date D --type T [--label L]   # take it out (log.md); --write after the yes
 ```
 
 ## Elsewhere
@@ -318,7 +327,7 @@ node .claude/skills/fitness-coach/scripts/engine.cjs log delete --vault . --json
   add, pause or remove a tracked item, and answer its reminder cards. The
   engine does each of them too (below), so without Pahlavan they happen in
   chat.
-- **`scripts/selfcheck.mjs`** (`node .claude/skills/fitness-coach/scripts/selfcheck.mjs [--vault .] [--json]`) is this skill's audit, automated: it runs every engine command in `numbers.md` read only and checks the docs against the engine (the JSON examples, the sections the table above names, the paths and slash commands named here, the version, and every number and field name the docs quote against `engine --version --json`'s `facts`); `npm run ship-skill` runs it after each ship and fails when it does.
+- **`scripts/selfcheck.mjs`** (`node <skill>/scripts/selfcheck.mjs [--vault .] [--json]`) is this skill's audit, automated: it runs every engine command in `numbers.md` read only and checks the docs against the engine (the JSON examples, the sections the table above names, the paths and slash commands named here, the version, and every number and field name the docs quote against `engine --version --json`'s `facts`); `npm run ship-skill` runs it after each ship and fails when it does.
 
 ## Without Pahlavan
 

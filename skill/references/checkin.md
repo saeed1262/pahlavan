@@ -54,12 +54,12 @@ no letter in `Coach/Letters/` yet, the first check-in runs as usual and skips
 what reads the last letter (its focus, its question, `focusFollowed`).
 
 ```bash
-node .claude/skills/fitness-coach/scripts/engine.cjs check --vault . --json --date <D>                     # first: the plan check
-node .claude/skills/fitness-coach/scripts/engine.cjs checkin template --vault . --json [--date D]          # step 1
-node .claude/skills/fitness-coach/scripts/engine.cjs checkin add --vault . --json --file <answers.json>    # step 3: a dry run
-node .claude/skills/fitness-coach/scripts/engine.cjs checkin add --vault . --json --file <answers.json> --write   # after the user's yes
-node .claude/skills/fitness-coach/scripts/engine.cjs review --vault . --json --date <D>                    # step 4
-node .claude/skills/fitness-coach/scripts/engine.cjs food --vault . --json --date <D>                      # step 4: the eating plan's side
+node <skill>/scripts/engine.cjs check --vault . --json --date <D>                     # first: the plan check
+node <skill>/scripts/engine.cjs checkin template --vault . --json [--date D]          # step 1
+node <skill>/scripts/engine.cjs checkin add --vault . --json --file <answers.json>    # step 3: a dry run
+node <skill>/scripts/engine.cjs checkin add --vault . --json --file <answers.json> --write   # after the user's yes
+node <skill>/scripts/engine.cjs review --vault . --json --date <D>                    # step 4
+node <skill>/scripts/engine.cjs food --vault . --json --date <D>                      # step 4: the eating plan's side
 ```
 
 ## 1. The template: what's known, what's open

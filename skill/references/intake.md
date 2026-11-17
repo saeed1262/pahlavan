@@ -32,7 +32,7 @@ their machine-readable twins `Coach/profile.json` and `Coach/ledger.json`
    confirmed priorities included, and write it on the user's yes, with the
    Ledger entries: the Markdown and the JSON together, the same facts in
    both. Check each JSON file with
-   `node .claude/skills/fitness-coach/scripts/engine.cjs validate <file>
+   `node <skill>/scripts/engine.cjs validate <file>
    --json` before saying it's written (fix and re-check on exit 1; read its
    `warnings` for free-text equipment or ids the engine doesn't know).
 6. **The first tracked items** (`tracking.md`): its questions first (desk

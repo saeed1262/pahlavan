@@ -2,7 +2,7 @@
 // The fitness-coach skill's self-check: the skill audit, automated. Run it
 // from the vault root after each ship (npm run ship-skill runs it):
 //
-//   node .claude/skills/fitness-coach/scripts/selfcheck.mjs [--vault .] [--json] [--repo <pahlavan checkout>]
+//   node <skill>/scripts/selfcheck.mjs [--vault .] [--json] [--repo <pahlavan checkout>]
 //
 // 1. Every engine command in numbers.md's block runs (placeholders filled with
 //    safe values, --write dropped) and gives JSON with ok, the fields the
@@ -46,7 +46,7 @@ import { availableParallelism, homedir, tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const USAGE = 'usage: node .claude/skills/fitness-coach/scripts/selfcheck.mjs [--vault .] [--json] [--repo <pahlavan checkout>]';
+const USAGE = 'usage: node <skill>/scripts/selfcheck.mjs [--vault .] [--json] [--repo <pahlavan checkout>]';
 
 // ---------- arguments and places ----------
 
@@ -808,7 +808,7 @@ async function checkCommands(help) {
     .map((l) => /^\s*node\s+\S*engine\.cjs\s+(.*?)\s*(?:#.*)?$/.exec(l)?.[1])
     .filter(Boolean);
   if (!lines.length) {
-    record(1, 'fail', 'numbers.md', 'no `node .claude/skills/fitness-coach/scripts/engine.cjs` lines in its code blocks');
+    record(1, 'fail', 'numbers.md', 'no `node <skill>/scripts/engine.cjs` lines in its code blocks');
     return;
   }
   const docs = lines.map((l) => ({ line: l, cmd: parseCommand(l, subcommands) }));

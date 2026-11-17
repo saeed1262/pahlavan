@@ -137,8 +137,15 @@ Each step ticks itself once its file is there. The [user guide](docs/user-guide.
 
 The coach works on its own in Claude Code, in a plain folder: no Obsidian and no plugin. You get the whole coach in chat (the intake, your plan and its reasons, logging, a morning check-in, the Sunday check-in and letter, the reviews, an eating plan and daily habits), with the same engine and the same files. You don't get the screens, the charts or the reminder cards, so you start each step yourself.
 
-1. Download `pahlavan-coach-<version>.zip` from the [latest release](../../releases/latest) and double-click it. You get a `Pahlavan` folder with the coach inside.
-2. Open that folder in Claude Code and type `/fitness-coach intake`.
+1. **Install the coach** as a Claude Code plugin, in a terminal:
+
+   ```
+   claude plugin marketplace add saeed1262/pahlavan
+   claude plugin install pahlavan@pahlavan
+   ```
+
+   Or download `pahlavan-coach-<version>.zip` from the [latest release](../../releases/latest) and double-click it: you get a `Pahlavan` folder with the coach inside.
+2. Open a folder for your training in Claude Code (a new one, or the zip's `Pahlavan` folder) and type `/fitness-coach intake`.
 
 Then, each with its command: every morning `/fitness-coach today` (today's session, what's due, a short morning check-in), after training `/fitness-coach log`, and on Sundays `/fitness-coach checkin`. Stand-ups and sitting time need Pahlavan (it counts them from your keyboard and mouse), so the coach leaves them out.
 
@@ -181,6 +188,8 @@ The coach screens for risks before it plans anything. It doesn't coach anyone un
   - Progress photos in `Fitness/Progress Photos/`.
   - The coach skill in `.claude/skills/fitness-coach/`, when you set it up.
   - Its own settings, in `.obsidian/plugins/pahlavan/`.
+
+The whole [privacy policy](docs/privacy.md) says what stays in your files and what leaves your computer.
 
 ## Support
 
